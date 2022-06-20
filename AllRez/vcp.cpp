@@ -8,6 +8,8 @@
 #include "vcp.h"
 #include "printf.h"
 #include "utilities.h"
+#include <cstring>
+#include <unistd.h>
 
 typedef enum {
 	kVCPDirectionRW,
@@ -124,7 +126,7 @@ long parsevcp(int level, char *vcps, IOI2CConnectRef i2cconnect, int val_IOI2CTr
 			while (1) {
 
 				//UInt8 *data = NULL; // for ddc/ci table reading
-				char *vcpcodedescription = NULL;
+				const char *vcpcodedescription = NULL;
 				UInt8 vcpcode = 0xff;
 				char cap[20];
 				bool hascap = false;
@@ -132,9 +134,9 @@ long parsevcp(int level, char *vcps, IOI2CConnectRef i2cconnect, int val_IOI2CTr
 				char errors[1000]; errors[0] = '\0';
 				char *errptr = errors;
 				VCPType vcptype;
-				char *vcptypestr;
+				const char *vcptypestr;
 				VCPDirection vcpdirection;
-				char *vcpdirectionstr;
+				const char *vcpdirectionstr;
 
 				for (; *c && *c == ' '; c++);
 				s = c;
@@ -461,7 +463,7 @@ long parsevcp(int level, char *vcps, IOI2CConnectRef i2cconnect, int val_IOI2CTr
 						case 0x52: // Active Control
 							{
 								#define onevcpcode(id, description, direction, type, mandatory, version) sl == 0x ## id ? description :
-								char * vstr =
+								const char * vstr =
 									sl == 0xff ? "FIFO has been overrun" :
 									sl == 0x00 ?         "FIFO is empty" :
 									#include "vcpcodes.h"

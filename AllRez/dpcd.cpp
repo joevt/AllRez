@@ -9,12 +9,13 @@
 
 #include "dpcd.h"
 
-#include <drm/dp/drm_dp_helper.h>
-#include <drm/drm_hdcp.h>
+#include <drm/display/drm_dp_helper.h>
+#include <drm/display/drm_hdcp.h>
 #include "dpcd_defs.h"
 #include "dc_dp_types.h"
 #include "oui.h"
 #include "printf.h"
+#include "displayport.h"
 
 
 int dpcdranges[] = {
@@ -65,6 +66,8 @@ int dpcdranges[] = {
 	0x03050, 0x03060,
 	0x03100, 0x03190,
 
+//#warning remove this limit when done testing
+#if 1
 	// 0x68000 HDCP 1.3 and HDCP 2.2
 	0x68000, 0x68040,
 	0x680c0, 0x68100,
@@ -89,6 +92,7 @@ int dpcdranges[] = {
 	// 0xf0000 LTTPR: Link Training (LT)-tunable PHY Repeaters
 	0xf0000, 0xf02d0,
 	// 0xFFFFF end
+#endif
 	-1
 };
 
@@ -97,9 +101,9 @@ static bool ismemzero(UInt8 *start, UInt8 *stop) {
 	return true;
 }
 
-void parsedpcd(void* dpcddata) {
-	UInt8 *dpcd = dpcddata;
+void parsedpcd(UInt8* dpcd) {
 	int dpcdRangeNdx;
+	iprintf("dpcd = {\n"); INDENT
 	for (dpcdRangeNdx = 0; dpcdranges[dpcdRangeNdx] >= 0; dpcdRangeNdx += 2) {
 		for (int dpcdAddr = dpcdranges[dpcdRangeNdx]; dpcdAddr < dpcdranges[dpcdRangeNdx + 1]; dpcdAddr += DP_AUX_MAX_PAYLOAD_BYTES) {
 			bool hasBytes = false;
@@ -116,7 +120,7 @@ void parsedpcd(void* dpcddata) {
 			for (int i = 0; i < DP_AUX_MAX_PAYLOAD_BYTES; i++) {
 				cprintf(" %02x", dpcd[dpcdAddr + i]);
 			}
-			cprintf("  ");
+			cprintf(" // ");
 			for (int i = 0; i < DP_AUX_MAX_PAYLOAD_BYTES; i++) {
 				cprintf("%c", (dpcd[dpcdAddr + i] >= ' ' && dpcd[dpcdAddr + i] <= '~') ? dpcd[dpcdAddr + i] : '.');
 			}
@@ -129,10 +133,10 @@ void parsedpcd(void* dpcddata) {
 	
 	char tempname[100];
 	int val;
-	char * name;
-	char * tname;
-	char * flag;
-	char * comma;
+	const char * name;
+	const char * tname;
+	const char * flag;
+	const char * comma;
 	int i;
 
 // begin new line (resets comma string)
@@ -208,7 +212,7 @@ void parsedpcd(void* dpcddata) {
 #define lb(format, ...) { cp(format " =", ##__VA_ARGS__); comma = " "; }
 
 // do one guid
-#define oguid(guid) cp("%08x-%04x-%04x-%04x-%02x%02x%02x%02x%02x%02x", d32(guid), d16(guid + 4), d16(guid + 6), d16(guid + 8), d8(guid + 10), d8(guid + 11), d8(guid + 12), d8(guid + 13), d8(guid + 14), d8(guid + 15))
+#define oguid(guid) cp("%08x-%04x-%04x-%04x-%02x%02x%02x%02x%02x%02x", d32be(guid), d16be(guid + 4), d16be(guid + 6), d16be(guid + 8), d8(guid + 10), d8(guid + 11), d8(guid + 12), d8(guid + 13), d8(guid + 14), d8(guid + 15))
 
 // dump a range of bytes as hex if they are not zero
 #define dumpnotzero(start, stop, ...) \
@@ -224,10 +228,10 @@ void parsedpcd(void* dpcddata) {
 			} \
 		} \
 	} while(0);
-#define dumpnotzero0(start, stop, ...) if (!iszero(start, stop)) { obf(start, "" __VA_ARGS__); for (int _j = start; _j < stop; _j++) cprintf(" %02x", d8(_j)); cprintf("  "); for (int _j = start; _j < stop; _j++) cprintf("%c", (d8(_j) >= ' ' && d8(_j) <= '~') ? d8(_j) : '.'); }
+#define dumpnotzero0(start, stop, ...) if (!iszero(start, stop)) { obf(start, "" __VA_ARGS__); for (int _j = start; _j < stop; _j++) cprintf(" %02x", d8(_j)); cprintf(" // "); for (int _j = start; _j < stop; _j++) cprintf("%c", (d8(_j) >= ' ' && d8(_j) <= '~') ? d8(_j) : '.'); }
 
 
-	if (!iszero(0x00000, 0x00100)) {
+	if (!iszero(0x00000, 0x00100)) { // looks like a valid dpcd
 		olf;
 
 		if (!iszero(0x00000, 0x00100)) {
@@ -471,7 +475,7 @@ void parsedpcd(void* dpcddata) {
 
 			#define DP_RX_GTC_VALUE 0x054
 			ob32(DP_RX_GTC_VALUE) { // 0x054
-				oi()
+				cp("0x%08x", val);
 			}
 
 			#define DP_RX_GTC 0x058
@@ -652,6 +656,7 @@ void parsedpcd(void* dpcddata) {
 					oc(DP_PSR_IS_SUPPORTED, "PSR_IS_SUPPORTED") // 1
 					oc(DP_PSR2_IS_SUPPORTED, "PSR2_IS_SUPPORTED") // 2	    /* eDP 1.4 */
 					oc(DP_PSR2_WITH_Y_COORD_IS_SUPPORTED, "PSR2_WITH_Y_COORD_IS_SUPPORTED") // 3	    /* eDP 1.4a */
+					oc(DP_PSR2_WITH_Y_COORD_ET_SUPPORTED, "PSR2_WITH_Y_COORD_ET_SUPPORTED") //  4	    /* eDP 1.5, adopted eDP 1.4b SCR */
 					od("?%d (unknown)", val)
 				}
 			}
@@ -669,8 +674,9 @@ void parsedpcd(void* dpcddata) {
 					oc(DP_PSR_SETUP_TIME_0,     "0µs") // (6 << 1)
 					od("?%d (unknown)", val)
 				}
-				of(DP_PSR2_SU_Y_COORDINATE_REQUIRED) // (1 << 4)  /* eDP 1.4a */
-				of(DP_PSR2_SU_GRANULARITY_REQUIRED)  // (1 << 5)  /* eDP 1.4b */
+				of(DP_PSR2_SU_Y_COORDINATE_REQUIRED)     // (1 << 4)  /* eDP 1.4a */
+				of(DP_PSR2_SU_GRANULARITY_REQUIRED)      // (1 << 5)  /* eDP 1.4b */
+				of(DP_PSR2_SU_AUX_FRAME_SYNC_NOT_NEEDED) // (1 << 6)  /* eDP 1.5, adopted eDP 1.4b SCR */
 				ofd(0xc0)
 			}
 
@@ -2224,11 +2230,19 @@ void parsedpcd(void* dpcddata) {
 
 		if (!iszero(0x01000, 0x01800)) {
 			iprintf("Sideband MSG Buffers"); INDENT
+			
+			#define doonesideband(x) \
+				if(!iszero(DP_ ## x ## _BASE, DP_ ## x ## _BASE + 0x200)) { \
+					dumpnotzero(DP_ ## x ## _BASE, DP_ ## x ## _BASE + 0x200, #x) \
+					olf; INDENT \
+					DumpOneDisplayPortMessage(&dpcd[DP_ ## x ## _BASE], 0x200, DP_ ## x ## _BASE); OUTDENT \
+				}
 
-			dumpnotzero(DP_SIDEBAND_MSG_DOWN_REQ_BASE, 0x1200, "SIDEBAND_MSG_DOWN_REQ") // 0x1000   /* 1.2 MST */
-			dumpnotzero(DP_SIDEBAND_MSG_UP_REP_BASE, 0x1400, "SIDEBAND_MSG_UP_REP") // 0x1200   /* 1.2 MST */
-			dumpnotzero(DP_SIDEBAND_MSG_DOWN_REP_BASE, 0x1600, "SIDEBAND_MSG_DOWN_REP") // 0x1400   /* 1.2 MST */
-			dumpnotzero(DP_SIDEBAND_MSG_UP_REQ_BASE, 0x1800, "SIDEBAND_MSG_UP_REQ") // 0x1600   /* 1.2 MST */
+			doonesideband(SIDEBAND_MSG_DOWN_REQ) // 0x1000   /* 1.2 MST */
+			doonesideband(SIDEBAND_MSG_UP_REP) // 0x1200   /* 1.2 MST */
+			doonesideband(SIDEBAND_MSG_DOWN_REP) // 0x1400   /* 1.2 MST */
+			doonesideband(SIDEBAND_MSG_UP_REQ) // 0x1600   /* 1.2 MST */
+			#undef doonesideband
 
 			olf; OUTDENT
 		}
@@ -2250,13 +2264,6 @@ void parsedpcd(void* dpcddata) {
 			}
 
 			ob(DP_DEVICE_SERVICE_IRQ_VECTOR_ESI0) { // 0x2003   /* same as 0x201 */
-				#define DP_REMOTE_CONTROL_COMMAND_PENDING (1 << 0)
-				#define DP_AUTOMATED_TEST_REQUEST (1 << 1)
-				#define DP_CP_IRQ (1 << 2)
-				#define DP_MCCS_IRQ (1 << 3)
-				#define DP_DOWN_REP_MSG_RDY (1 << 4)
-				#define DP_UP_REQ_MSG_RDY (1 << 5)
-				#define DP_SINK_SPECIFIC_IRQ (1 << 6)
 				of(DP_REMOTE_CONTROL_COMMAND_PENDING) // (1 << 0)
 				of(DP_AUTOMATED_TEST_REQUEST) // (1 << 1)
 				of(DP_CP_IRQ) // (1 << 2)
@@ -3067,7 +3074,7 @@ void parsedpcd(void* dpcddata) {
 			dumpnotzero(0xf0009, 0xf0010)
 
 			for (i = 0; i < DP_MAX_LTTPR_COUNT; i++) { // 0xf0010, 0xf0060, 0xf00b0, 0xf0100,   0xf0150, 0xf01a0, 0xf01f0, 0xf0240 /* 1.3 */
-				enum drm_dp_phy dp_phy = DP_PHY_LTTPR(i);
+				enum drm_dp_phy dp_phy = (enum drm_dp_phy)DP_PHY_LTTPR(i);
 				if (!iszero(DP_LTTPR_BASE(dp_phy), DP_LTTPR_BASE(DP_PHY_LTTPR(i+1)))) {
 
 					obf(DP_TRAINING_PATTERN_SET_PHY_REPEATER(dp_phy), "TRAINING_PATTERN_SET_PHY_REPEATER%d", i+1) { // 0xf0010 /* 1.3 */
@@ -3139,7 +3146,7 @@ void parsedpcd(void* dpcddata) {
 			} // for dp_phy
 
 			for (i = 0; i < DP_MAX_LTTPR_COUNT; i++) { // 0xf0290, 0xf0298, 0xf02a0, 0xf02a8, 0xf02b0, 0xf02b8, 0xf02c0, 0xf02c8 /* 1.4 */
-				enum drm_dp_phy dp_phy = DP_PHY_LTTPR(i);
+				enum drm_dp_phy dp_phy = (enum drm_dp_phy)DP_PHY_LTTPR(i);
 				if (!iszero(DP_LTTPR_BASE(dp_phy), DP_LTTPR_BASE(DP_PHY_LTTPR(i+1)))) {
 
 					obf(DP_FEC_STATUS_PHY_REPEATER(dp_phy), "FEC_STATUS_PHY_REPEATER%d", i+1) { // 0xf0290 /* 1.4 */
@@ -3161,7 +3168,7 @@ void parsedpcd(void* dpcddata) {
 			dumpnotzero(0xf02d0, 0xf0300)
 
 			olf; OUTDENT
-		}
+		} // if (!iszero(0xf0000, 0xf0300))
 
 		if (!iszero(0xf0300, 0x100000)) {
 			iprintf("Undefined"); INDENT
@@ -3169,5 +3176,9 @@ void parsedpcd(void* dpcddata) {
 			olf; OUTDENT
 		}
 
-	}
+	} // if looks like a valid dpcd
+
+	OUTDENT
+	iprintf("}; // dpcd\n");
+
 } // parsedpcd

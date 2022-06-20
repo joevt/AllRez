@@ -10,6 +10,6 @@
 
 extern int dpcdranges[];
 
-void parsedpcd(void *dpcddata);
+void parsedpcd(UInt8 *dpcd);
 
 #endif /* dpcd_h */

@@ -9,6 +9,11 @@
 
 //#include <Foundation/Foundation.h>
 
+#include <CoreFoundation/CFArray.h>
+#include <CoreFoundation/CFNumber.h>
+#include <CoreFoundation/CFData.h>
+#include <CoreFoundation/CFByteOrder.h>
+
 #include <CoreGraphics/CGDirectDisplay.h>
 #include <CoreGraphics/CGDisplayConfiguration.h>
 //#include <CoreGraphics/CoreGraphicsPrivate.h>
@@ -17,243 +22,33 @@
 #include <IOKit/graphics/IOGraphicsTypes.h>
 #include <IOKit/graphics/IOGraphicsInterfaceTypes.h>
 //#include <IOKit/graphics/IOGraphicsTypesPrivate.h>
-#include <IOKit/i2c/IOI2CInterface.h>
+//#include <IOKit/ndrvsupport/IONDRVLibraries.h>
 
 #include <IOKit/ndrvsupport/IOMacOSVideo.h>
 
 //#include <Kernel/IOKit/ndrvsupport/IONDRVFramebuffer.h>
 //#include <IOKitUser/graphics/IOGraphicsLibInternal.h>
 
-// <IOKit/graphics/IOGraphicsTypes.h>
-// kConnectionColorMode attribute
-enum {
-	kIODisplayColorModeReserved   = 0x00000000,
-	kIODisplayColorModeRGB        = 0x00000001,
-	kIODisplayColorModeYCbCr422   = 0x00000010,
-	kIODisplayColorModeYCbCr444   = 0x00000100,
-	kIODisplayColorModeRGBLimited = 0x00001000,
-	kIODisplayColorModeAuto       = 0x10000000,
-};
+#include "AppleMisc.h"
 
 
-#define min(x,y) (((x)<(y)) ? (x) : (y))
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-// https://github.com/apple-oss-distributions/IOKitUser/blob/rel/IOKitUser-1445/graphics.subproj/IOGraphicsLibInternal.h
-struct IOFBOvrDimensions {
-	UInt32              width;
-	UInt32              height;
-	IOOptionBits        setFlags; // kDisplayModeSafeFlag
-	IOOptionBits        clearFlags;
-};
-typedef struct IOFBOvrDimensions IOFBOvrDimensions;
+#include <IOKit/i2c/IOI2CInterface.h>
 
+extern int iogdiagnose(int dumpToFile, const char *optarg);
 
-// https://github.com/apple-oss-distributions/IOGraphics/blob/main/IOGraphicsFamily/IOKit/graphics/IOGraphicsTypesPrivate.h
-
-enum { // 30
-	// This is the ID given to a programmable timing used at boot time
-	k1 = kIODisplayModeIDBootProgrammable, // = (IODisplayModeID)0xFFFFFFFB,
-	// Lowest (unsigned) DisplayModeID reserved by Apple
-	k2 = kIODisplayModeIDReservedBase, // = (IODisplayModeID)0x80000000
-
-	// This is the ID given to a programmable timing used at boot time
-	kIODisplayModeIDInvalid     = (IODisplayModeID) 0xFFFFFFFF,
-	kIODisplayModeIDCurrent     = (IODisplayModeID) 0x00000000,
-	kIODisplayModeIDAliasBase   = (IODisplayModeID) 0x40000000,
-	
-	// https://github.com/apple-oss-distributions/IOKitUser/blob/rel/IOKitUser-1445/graphics.subproj/IOGraphicsLib.c
-	kIOFBSWOfflineDisplayModeID = (IODisplayModeID) 0xffffff00,
-	kArbModeIDSeedMask           = (IODisplayModeID) 0x00007000, //  (connectRef->arbModeIDSeed is incremented everytime IOFBBuildModeList is called) // https://github.com/apple-oss-distributions/IOKitUser/blob/rel/IOKitUser-1445/graphics.subproj/IOGraphicsLibInternal.h
-};
-
-enum { // 36
-	// options for IOServiceRequestProbe()
-	kIOFBForceReadEDID                  = 0x00000100,
-	kIOFBAVProbe                        = 0x00000200,
-	kIOFBSetTransform                   = 0x00000400,
-	kIOFBTransformShift                 = 16,
-	kIOFBScalerUnderscan                = 0x01000000,
-};
-
-enum { // 45
-	// transforms
-	kIOFBRotateFlags                    = 0x0000000f,
-
-	kIOFBSwapAxes                       = 0x00000001,
-	kIOFBInvertX                        = 0x00000002,
-	kIOFBInvertY                        = 0x00000004,
-
-	kIOFBRotate0                        = 0x00000000,
-	kIOFBRotate90                       = kIOFBSwapAxes | kIOFBInvertX,
-	kIOFBRotate180                      = kIOFBInvertX  | kIOFBInvertY,
-	kIOFBRotate270                      = kIOFBSwapAxes | kIOFBInvertY
-};
-
-enum { // 71
-	// Controller attributes
-	kIOFBSpeedAttribute                 = ' dgs',
-	kIOFBWSStartAttribute               = 'wsup',
-	kIOFBProcessConnectChangeAttribute  = 'wsch',
-	kIOFBEndConnectChangeAttribute      = 'wsed',
-
-	kIOFBMatchedConnectChangeAttribute  = 'wsmc',
-
-	// Connection attributes
-	kConnectionInTVMode                 = 'tvmd',
-	kConnectionWSSB                     = 'wssb',
-
-	kConnectionRawBacklight             = 'bklt',
-	kConnectionBacklightSave            = 'bksv',
-
-	kConnectionVendorTag                = 'vtag'
-};
-
-/*! @enum FramebufferConstants
-	@constant kIOFBVRAMMemory The memory type for IOConnectMapMemory() to get the VRAM memory. Use a memory type equal to the IOPixelAperture index to get a particular pixel aperture.
-*/
-enum { // 106
-	kIOFBVRAMMemory = 110
-};
-
-#define kIOFBGammaHeaderSizeKey         "IOFBGammaHeaderSize" // 110
-
-#define kIONDRVFramebufferGenerationKey "IONDRVFramebufferGeneration"
-
-#define kIOFramebufferOpenGLIndexKey    "IOFramebufferOpenGLIndex"
-
-#define kIOFBCurrentPixelClockKey       "IOFBCurrentPixelClock"
-#define kIOFBCurrentPixelCountKey       "IOFBCurrentPixelCount"
-#define kIOFBCurrentPixelCountRealKey   "IOFBCurrentPixelCountReal"
-
-#define kIOFBTransformKey               "IOFBTransform"
-#define kIOFBRotatePrefsKey             "framebuffer-rotation"
-#define kIOFBStartupTimingPrefsKey      "startup-timing"
-
-#define kIOFBCapturedKey                "IOFBCaptured"
-
-#define kIOFBMirrorDisplayModeSafeKey   "IOFBMirrorDisplayModeSafe"
-
-#define kIOFBConnectInterruptDelayKey   "connect-interrupt-delay"
-
-#define kIOFBUIScaleKey					"IOFBUIScale"
-
-#define kIOGraphicsPrefsKey             "IOGraphicsPrefs"
-#define kIODisplayPrefKeyKey            "IODisplayPrefsKey"
-#define kIODisplayPrefKeyKeyOld         "IODisplayPrefsKeyOld"
-#define kIOGraphicsPrefsParametersKey   "IOGraphicsPrefsParameters"
-#define kIOGraphicsIgnoreParametersKey  "IOGraphicsIgnoreParameters" // 136
-
-#define detailedTimingModeID            __reservedA[0] // 156
-
-#define kIOFBDPDeviceIDKey          "dp-device-id" // 214
-#define kIOFBDPDeviceTypeKey        "device-type"
-#define kIOFBDPDeviceTypeDongleKey  "branch-device"
-
-enum // 218
-{
-	kDPRegisterLinkStatus      = 0x200,
-	kDPRegisterLinkStatusCount = 6,
-	kDPRegisterServiceIRQ      = 0x201,
-};
-
-enum
-{
-	kDPLinkStatusSinkCountMask = 0x3f,
-};
-
-enum
-{
-	kDPIRQRemoteControlCommandPending = 0x01,
-	kDPIRQAutomatedTestRequest        = 0x02,
-	kDPIRQContentProtection           = 0x04,
-	kDPIRQMCCS                        = 0x08,
-	kDPIRQSinkSpecific                = 0x40,
-};
-
-enum // 244
-{
-	// values for graphic-options & kIOMirrorDefaultAttribute
-//  kIOMirrorDefault       = 0x00000001,
-//  kIOMirrorForced        = 0x00000002,
-	kIOGPlatformYCbCr      = 0x00000004,
-	kIOFBDesktopModeAllowed = 0x00000008,   // https://github.com/apple-oss-distributions/IOGraphics/blob/rel/IOGraphics-305/IOGraphicsFamily/IOFramebuffer.cpp // gIOFBDesktopModeAllowed
-//  kIOMirrorHint          = 0x00010000,
-	kIOMirrorNoAutoHDMI    = 0x00000010,
-	kIOMirrorHint           = 0x00010000,	// https://github.com/apple-oss-distributions/IOGraphics/blob/rel/IOGraphics-585/IONDRVSupport/IONDRVFramebuffer.cpp
-};
-
-
-// https://github.com/robbertkl/ResolutionMenu/blob/master/Resolution%20Menu/DisplayModeMenuItem.m
-// CoreGraphics DisplayMode struct used in private APIs
-typedef struct {
-	uint32_t mode; // mode index (0..CGSGetNumberOfDisplayModes - 1)
-	uint32_t flags; // similar to IOFlags -> IOFramebufferInformation.flags kDisplayModeSafetyFlags
-	uint32_t width; // "Looks like"
-	uint32_t height; // "Looks like"
-	uint32_t depthFormat; // 4 or 8
-
-	uint32_t bytesPerRow; // width * bits per pixel / 8
-	uint32_t bitsPerPixel; // 32
-	uint32_t bitsPerSample; // 8 or 10
-	uint32_t samplesPerPixel; // 3
-	uint32_t intRefreshRate; // 60 integer refresh rate
-	uint32_t horizontalResolution; // ??? dpi maybe
-	uint32_t verticalResolution; // ??? dpi maybe
-
-	IOPixelEncoding pixelEncoding; // --------RRRRRRRRGGGGGGGGBBBBBBBB
-	uint64_t unknown2[8]; // 0
-	uint16_t unknown0; // 0
-	uint32_t unknown1; // 1
-	uint32_t size; // 0xd4 = sizeof(CGSDisplayModeDescription)
-	uint32_t refreshRate; // 59.875 : 16b.16b refresh rate fixed point (the fractional part might be flags (0001 or E002)? but it appears to be used as a fraction in the dictionary results)
-
-	uint32_t IOFlags; // -> IOFramebufferInformation.flags kDisplayModeSafetyFlags
-	IODisplayModeID DisplayModeID; // 0x8000xyyy
-
-	uint32_t PixelsWide; // actual pixels = double width for HiDPI
-	uint32_t PixelsHigh; // actual pixels = double height for HiDPI
-
-	float resolution; // 1 = normal, 2 = HiDPI
-} CGSDisplayModeDescription;
-
-// CoreGraphics private APIs with support for scaled (retina) display modes
-CGError CGSGetCurrentDisplayMode(CGDirectDisplayID display, uint32_t* modeNum);
-CGError CGSConfigureDisplayMode(CGDisplayConfigRef config, CGDirectDisplayID display, uint32_t modeNum);
-CGError CGSGetNumberOfDisplayModes(CGDirectDisplayID display, uint32_t* nModes);
-CGError CGSGetDisplayModeDescriptionOfLength(CGDirectDisplayID display, int idx, CGSDisplayModeDescription* mode, int length);
-CGError CGSServiceForDisplayNumber(CGDirectDisplayID display, io_service_t *service);
-CGError CGSDisplayDeviceForDisplayNumber(CGDirectDisplayID display, io_service_t *service);
-
-bool SLSIsDisplayModeVRR(CGDirectDisplayID display) __attribute__((weak_import));
-
-CGError SLSDisplaySetHDRModeEnabled(CGDirectDisplayID display, bool enable, int, int)  __attribute__((weak_import));
-bool SLSDisplayIsHDRModeEnabled(CGDirectDisplayID display) __attribute__((weak_import));
-bool SLSDisplaySupportsHDRMode(CGDirectDisplayID display) __attribute__((weak_import));
-
-CGError CGSEnableHDR(CGDirectDisplayID display, bool enable, int, int)  __attribute__((weak_import));
-bool CGSIsHDREnabled(CGDirectDisplayID display) __attribute__((weak_import));
-bool CGSIsHDRSupported(CGDirectDisplayID display) __attribute__((weak_import));
-
-extern int DisplayServicesGetBrightness(CGDirectDisplayID display, float *brightness); // probably doesn't return an error
-extern int DisplayServicesSetBrightness(CGDirectDisplayID display, float brightness);
-
-size_t CGDisplayBitsPerPixel(CGDirectDisplayID display);
-size_t CGDisplayBitsPerSample(CGDirectDisplayID display);
-size_t CGDisplaySamplesPerPixel(CGDirectDisplayID display);
-size_t CGDisplayBytesPerRow(CGDirectDisplayID display);
-
-
-void KeyArrayCallback(const void *key, const void *value, void *context)
-{
-	CFArrayAppendValue(context, key);
+#ifdef __cplusplus
 }
-
+#endif
 
 //=================================================================================================================================
 // Linux includes
 
-#include <drm/dp/drm_dp_helper.h>
-#include <drm/drm_hdcp.h>
+#include <drm/display/drm_dp_helper.h>
+#include <drm/display/drm_hdcp.h>
 #include "dpcd_defs.h"
 
 //=================================================================================================================================
@@ -263,54 +58,22 @@ void KeyArrayCallback(const void *key, const void *value, void *context)
 #include "dpcd.h"
 #include "printf.h"
 #include "utilities.h"
+#include "iofbdebuguser.h"
+#include "displayport.h"
 
 //=================================================================================================================================
 // Defines
-
-// These are in micoseconds
-
-#define kDelayDisplayPortReply 0
 
 #define TRYSUBADDRESS 0 // I don't know when sub address is useful or not - better not try it
 
 //=================================================================================================================================
 // Utilities
 
-static void CFOutput(CFTypeRef val) {
-	if (val) {
-		CFStringRef theinfo = CFCopyDescription(val); // can't really parse this if the format can change for every macOS
-		if (theinfo) {
-			size_t maxsize = CFStringGetMaximumSizeForEncoding(CFStringGetLength(theinfo), kCFStringEncodingUTF8);
-			char *strinfo = (char *)malloc(maxsize);
-			if (strinfo) {
-				if (CFStringGetCString(theinfo, strinfo, maxsize, kCFStringEncodingUTF8)) {
-					char *next;
-					char *s;
-					for (s = strinfo; ; s = next + 1) {
-						next = strstr(s, "\n");
-						if (!next) {
-							cprintf("%s", s);
-							break;
-						}
-						cprintf("%.*s", (int)(next - s + 1), s);
-						iprintf("");
-					}
-				}
-				else {
-					cprintf("? (CFStringGetCString error)");
-				}
-				free(strinfo);
-			}
-			CFRelease(theinfo);
-		}
-		else {
-			cprintf("? (CFCopyDescription error)");
-		}
-	}
-	else {
-		cprintf("(NULL)");
-	}
+void KeyArrayCallback(const void *key, const void *value, void *context)
+{
+	CFArrayAppendValue((CFMutableArrayRef)context, key);
 }
+
 
 //=================================================================================================================================
 
@@ -329,18 +92,6 @@ static void DumpOneID(CFNumberRef ID, int modeAlias) {
 		cprintf("?");
 	}
 }
-
-char * myprintf(char *format, ...) {
-	char *unknownValue = malloc(20);
-	va_list vl;
-	va_start(vl, format);
-	vsnprintf(unknownValue, 20, format, vl);
-	va_end(vl);
-	return unknownValue;
-}
-
-#define UNKNOWN_FLAG( x) (x) ? myprintf("?0x%x,", (x)) : ""
-#define UNKNOWN_VALUE(x)       myprintf("?0x%x", (x))
 
 static bool DumpOneCursorInfo(CFDataRef IOFBOneCursorInfo, int compareNdx) {
 	CFIndex size = CFDataGetLength(IOFBOneCursorInfo);
@@ -432,8 +183,7 @@ static void DumpOneDetailedTimingInformationPtr(void *IOFBDetailedTiming, CFInde
 		default                                   : cprintf("Unexpected size:%ld", (long)size); break;
 	}
 
-	if (size >= sizeof(IODetailedTimingInformationV2))
-	{
+	if (size >= sizeof(IODetailedTimingInformationV2)) {
 		char hexDigits[] = "0123456789abcdef";
 		hexDigits[modeAlias] = '.';
 		
@@ -451,7 +201,7 @@ static void DumpOneDetailedTimingInformationPtr(void *IOFBDetailedTiming, CFInde
 		}
 
 		cprintf(" id:0x%04x%c%03x %dx%d@%s %.3fkHz %.3fMHz (errMHz %g,%g)  h(%d %d %d %s%s)  v(%d %d %d %s%s)  border(h%d:%d v%d:%d)  active:%dx%d %s inset:%dx%d flags(%s%s%s%s%s%s%s%s%s%s%s%s%s%s) signal(%s%s%s%s%s%s%s%s) levels:%s links:%d " \
-			"vbext:%d vbstretch:%d vbshrink:%d encodings(%s%s%s%s%s) bpc(%s%s%s%s%s%s) colorimetry(%s%s%s%s%s%s%s%s%s%s%s) dynamicrange(%s%s%s%s%s%s%s) dsc(%dx%d %gbpp) %s%s%s%s%s%s%s%s%s%s",
+			"vbext:%d vbstretch:%d vbshrink:%d encodings(%s%s%s%s%s) bpc(%s%s%s%s%s%s) colorimetry(%s%s%s%s%s%s%s%s%s%s%s) dynamicrange(%s%s%s%s%s%s%s) dsc(%dx%d %gbpp)%s%s%s%s%s%s%s%s%s%s",
 
 			timing->detailedTimingModeID >> 16, // mode
 			hexDigits[(timing->detailedTimingModeID >> 12) & 15],
@@ -623,11 +373,11 @@ static bool DumpOneDetailedTimingInformation(CFDataRef IOFBDetailedTiming, int c
 		memcmp(&timing, &detailedTimingsArr[compareNdx], sizeof(timing) )
 	) {
 		if (compareNdx >= 0) {
-			iprintf("[%d] = {", compareNdx);
+			iprintf("[%d] = { ", compareNdx);
 		}
 		DumpOneDetailedTimingInformationPtr(&timing, size, modeAlias);
 		if (compareNdx >= 0) {
-			cprintf("};\n");
+			cprintf(" };\n");
 		}
 	}
 	else {
@@ -988,8 +738,10 @@ static void DumpOneTimingInformation(CFDataRef IOTimingInformationData, int mode
 			info->flags & kIOScalingInfoValid    ?    "ScalingInfoValid," : "",
 			UNKNOWN_FLAG(info->flags & 0x3fffffff)
 		);
-		DumpOneDetailedTimingInformationPtr(&info->detailedInfo, size - offsetof(IOTimingInformation, detailedInfo), modeAlias);
-		cprintf("}");
+		if (info->flags & kIODetailedTimingValid) {
+			DumpOneDetailedTimingInformationPtr(&info->detailedInfo, size - offsetof(IOTimingInformation, detailedInfo), modeAlias);
+		}
+		cprintf(" }");
 	}
 } // DumpOneTimingInformation
 
@@ -1009,7 +761,7 @@ static void DumpOneTransform(SInt32 numValue) {
 } // DumpOneTransform
 
 static char * GetOneFlagsStr(UInt64 flags) {
-	char * flagsstr = malloc(1000);
+	char * flagsstr = (char *)malloc(1000);
 	if (flagsstr) {
 		snprintf(flagsstr, 1000, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
 			flags & kDisplayModeValidFlag              ?                  "Valid," : "",
@@ -1173,7 +925,7 @@ static CFDictionaryRef CGDisplayModeToDict(CGDisplayModeRef mode) {
 	if (cf_ ## _field) { \
 		if (CFGetTypeID(cf_ ## _field) == CFNumberGetTypeID()) { \
 			if (copy) CFDictionaryRemoveValue(copy, CFSTR(#_field)); \
-			CFNumberGetValue(cf_ ## _field, kCFNumberFloat32Type, &val_ ## _field); \
+			CFNumberGetValue((CFNumberRef)cf_ ## _field, kCFNumberFloat32Type, &val_ ## _field); \
 			snprintf(str_ ## _field, sizeof(str_ ## _field), _format, val_ ## _field); \
 		} \
 		else \
@@ -1189,7 +941,7 @@ static CFDictionaryRef CGDisplayModeToDict(CGDisplayModeRef mode) {
 	if (cf_ ## _field) { \
 		if (CFGetTypeID(cf_ ## _field) == CFNumberGetTypeID() || CFGetTypeID(cf_ ## _field) == CFBooleanGetTypeID()) { \
 			if (copy) CFDictionaryRemoveValue(copy, CFSTR(#_field)); \
-			if (CFNumberGetValue(cf_ ## _field, kCFNumberSInt ## _size ## Type, &val_ ## _field)) \
+			if (CFNumberGetValue((CFNumberRef)cf_ ## _field, kCFNumberSInt ## _size ## Type, &val_ ## _field)) \
 				snprintf(str_ ## _field, sizeof(str_ ## _field), _format, val_ ## _field); \
 			else \
 				snprintf(str_ ## _field, sizeof(str_ ## _field), "¿"); \
@@ -1206,7 +958,7 @@ static CFDictionaryRef CGDisplayModeToDict(CGDisplayModeRef mode) {
 	if (cf_ ## _field) { \
 		if (CFGetTypeID(cf_ ## _field) == CFStringGetTypeID()) { \
 			if (copy) CFDictionaryRemoveValue(copy, CFSTR(#_field)); \
-			CFStringGetCString(cf_ ## _field, str_ ## _field, sizeof(str_ ## _field), kCFStringEncodingUTF8); \
+			CFStringGetCString((CFStringRef)cf_ ## _field, str_ ## _field, sizeof(str_ ## _field), kCFStringEncodingUTF8); \
 		} \
 		else \
 			snprintf(str_ ## _field, sizeof(str_ ## _field), "?"); \
@@ -1341,599 +1093,219 @@ static void DumpOneCGDisplayMode(CGDisplayModeRef mode, int modeAlias) {
 
 static void printBooleanKeys(const void *key, const void *value, void *context) {
 	if (CFGetTypeID(value) == CFBooleanGetTypeID()) {
-		char str[256];
-		CFStringGetCString(key, str, sizeof(str), CFStringGetSystemEncoding());
+		char keyStr[256];
+		CFStringGetCString((CFStringRef)key, keyStr, sizeof(keyStr), CFStringGetSystemEncoding());
 
 		SInt32 numValue;
-		CFNumberGetValue(value, kCFNumberSInt32Type, &numValue);
-		iprintf("%s = %s;\n", str,
+		CFNumberGetValue((CFNumberRef)value, kCFNumberSInt32Type, &numValue);
+		iprintf("%s = %s;\n", keyStr,
 			numValue == 1 ?  "true" :
 			numValue == 0 ? "false" :
 			UNKNOWN_VALUE(numValue)
 		);
 		CFDictionaryRemoveValue((CFMutableDictionaryRef)context, key);
 	}
-}
+} // printBooleanKeys
 
 static void DoAllBooleans(CFMutableDictionaryRef dict) {
 	CFDictionaryApplyFunction(dict, printBooleanKeys, dict);
 }
 
-uint8_t crc4(const uint8_t * data, size_t NumberOfNibbles)
-{
-	uint8_t BitMask      = 0x80;
-	uint8_t BitShift     = 7;
-	uint8_t ArrayIndex   = 0;
-	int     NumberOfBits = (int)NumberOfNibbles * 4;
-	uint8_t Remainder    = 0;
 
-	while (NumberOfBits != 0)
-	{
-		NumberOfBits--;
-		   Remainder <<= 1;
-		   Remainder |= (data[ArrayIndex] & BitMask) >> BitShift;
-		   BitMask >>= 1;
-		   BitShift--;
-		   if (BitMask == 0)
-		   {
-			   BitMask  = 0x80;
-			   BitShift = 7;
-			   ArrayIndex++;
-		   }
-		   if ((Remainder & 0x10) == 0x10)
-		   {
-			   Remainder ^= 0x13;
-		   }
-	}
-	NumberOfBits = 4;
-	while (NumberOfBits != 0)
-	{
-		NumberOfBits--;
-		Remainder <<= 1;
-		if ((Remainder & 0x10) != 0)
-		{
-			Remainder ^= 0x13;
-		}
-	}
+static void printEDIDKeys(const void *key, const void *value, void *context) {
+    if (CFGetTypeID(value) == CFDataGetTypeID()) {
+        char keyStr[256];
+        CFStringGetCString((CFStringRef)key, keyStr, sizeof(keyStr), CFStringGetSystemEncoding());
+        if (!strncmp(keyStr, "IOFBEDID", 8)) {
+            CFDataRef data = (CFDataRef)value;
+            iprintf("%s = ", keyStr);
+            const UInt8 *p = CFDataGetBytePtr(data);
+            for (int i = 0; i < CFDataGetLength(data); i++) {
+                cprintf("%02x", p[i]);
+            }
+            lf;
+            CFDictionaryRemoveValue((CFMutableDictionaryRef)context, key);
+        }
+    }
+} // printEDIDKeys
 
-   return Remainder;
-} // crc4
+static void DoAllEDIDs(CFMutableDictionaryRef dict) {
+    CFDictionaryApplyFunction(dict, printEDIDKeys, dict);
+} // DoAllEDIDs
 
-uint8_t crc8(const uint8_t * data, uint8_t NumberOfBytes)
-{
-	uint8_t  BitMask      = 0x80;
-	uint8_t  BitShift     = 7;
-	uint8_t  ArrayIndex   = 0;
-	uint16_t NumberOfBits = NumberOfBytes * 8;
-	uint16_t Remainder    = 0;
 
-	while (NumberOfBits != 0)
-	{
-		NumberOfBits--;
-		Remainder <<= 1;
-		Remainder |= (data[ArrayIndex] & BitMask) >> BitShift;
-		BitMask >>= 1;
-		BitShift--;
-		if (BitMask == 0)
-		{
-			BitMask  = 0x80;
-			BitShift = 7;
-			ArrayIndex++;
-		}
-		if ((Remainder & 0x100) == 0x100)
-		{
-			Remainder ^= 0xD5;
-		}
-	}
-	NumberOfBits = 8;
-	while (NumberOfBits != 0)
-	{
-		NumberOfBits--;
-		Remainder <<= 1;
-		if ((Remainder & 0x100) != 0)
-		{
-			Remainder ^= 0xD5;
-		}
-	}
-   return Remainder & 0xFF;
-} // crc8
 
-static void DoOneDisplayPort(IOI2CConnectRef i2cconnect, UInt8 *inpath, int pathLength) {
-	// the first number in the path is the port number
+static void DoOneDisplayPort(io_service_t ioFramebufferService, IOI2CConnectRef i2cconnect, UInt8 *inpath, int pathLength, bool shorttest) {
+	// If pathLength is 0, then do normal DisplayPort (not mst sideband messages - there is no port or RAD).
+    // If pathLength is 1, The first number in the path is the port number. The RAD is empty.
+    // If pathLength is 2 or more, then the RAD lists 1 or more ports.
 	
-	IOI2CRequest request;
 	IOReturn result = kIOReturnSuccess;
 	UInt8 path[16];
 	memcpy(path, inpath, pathLength);
 	
-	UInt8 *dpcd = malloc(0x100000);
-	if (dpcd) {
-		bzero(dpcd, 0x100000);
+	UInt8 *dpcd = (UInt8 *)malloc(0x100000);
+	if (!dpcd) return;
+	bzero(dpcd, 0x100000);
+	DpError dperr = dpNoError;
+	char resultStr[40];
 
-		int dpcdRangeNdx;
-		for (dpcdRangeNdx = 0; dpcdranges[dpcdRangeNdx] >= 0; dpcdRangeNdx += 2) {
-			bool hasError = false;
-			int dpcdAddr;
-			for (dpcdAddr = dpcdranges[dpcdRangeNdx]; dpcdAddr < dpcdranges[dpcdRangeNdx + 1]; dpcdAddr += DP_AUX_MAX_PAYLOAD_BYTES) {
-				for (int attempt = 0; attempt < 3; attempt++) {
+	int dpcdRangeNdx;
+	for (dpcdRangeNdx = 0; dpcdranges[dpcdRangeNdx] >= 0; dpcdRangeNdx += 2) {
+		bool hasError = false;
+		int dpcdAddr;
+		int dpcdIncrement = 16;
+		for (dpcdAddr = dpcdranges[dpcdRangeNdx]; dpcdAddr < dpcdranges[dpcdRangeNdx + 1]; dpcdAddr += dpcdIncrement) {
+			int maxattempts = 1;
+			int attempt;
+			for (attempt = 0; attempt < maxattempts; attempt++) {
+				gDumpSidebandMessage = (dpcdAddr == 0) * (kReq | kRep);
+				result = mst_req_dpcd_read(ioFramebufferService, i2cconnect, path, pathLength, dpcdAddr, dpcdIncrement, &dpcd[dpcdAddr], &dperr);
+				gDumpSidebandMessage = 0;
 
-					if (pathLength) {
-						struct I2C_Transaction {
-							UInt8 Write_I2C_Device_Identifier : 7; // LSB
-							UInt8 zero : 1; // MSB
-							UInt8 Number_Of_Bytes_To_Write;
-							UInt8 I2C_Data_To_Write; // unknown length;
-						};
-						
-						struct Remote_I2C_Read2 {
-							UInt8 I2C_Transaction_Delay : 4; // LSB
-							UInt8 No_Stop_Bit : 1;
-							UInt8 zeros : 3; // MSB
-						};
-						
-						typedef struct __attribute__((packed)) __attribute__((aligned(1))) {
-							UInt8 Request_Identifier : 7; // LSB copy of same in Request Message Transaction
-							UInt8 Reply_Type : 1; // MSB DP_SIDEBAND_REPLY_ACK=0 or DP_SIDEBAND_REPLY_NAK=1
-							union Reply_Data {
-								struct {
-									guid_t Global_Unique_Identifier;
-									UInt8 Reason_For_NAK; // DP_NAK_INVALID_READ should actually be renamed DP_NAK_INVALID_RAD
-									UInt8 NAK_Data;
-								} NAK; // 1
-								struct {
-									union {
-										struct {
-											UInt8 Port_Number : 4; // LSB
-											UInt8 zeros : 4; // MSB
-											UInt8 Number_Of_Bytes_Read;
-											UInt8 Data_Read[1];
-											UInt8 end;
-										} Remote_DPCD_Read;
-										struct {
-											UInt8 Port_Number : 4; // LSB
-											UInt8 zeros : 4; // MSB
-											UInt8 Number_Of_Bytes_Read;
-											UInt8 Data_Read[1];
-											UInt8 end;
-										} Remote_I2C_Read;
-									} ACK_Data;
-								} ACK; // 0
-							} data;
-						} Message_Transaction_Reply;
-
-						typedef struct __attribute__((packed)) __attribute__((aligned(1))) {
-							struct Sideband_MSG_Header {
-								UInt8 Link_Count_Remaining : 4; // LSB init to Link_Count_Total
-								UInt8 Link_Count_Total : 4; // MSB
-
-								UInt8 Relative_Address[8]; // 16 nibbles nibble[0] is MSB of byte[0]
-							} header;
-						}  Sideband_MSG1;
-
-						typedef struct __attribute__((packed)) __attribute__((aligned(1))) {
-							struct Sideband_MSG_Header2 {
-								UInt8 Sideband_MSG_Body_Length : 6; // LSB
-								UInt8 Path_Message : 1;
-								UInt8 Broadcast_Message : 1; // MSB
-
-								UInt8 Sideband_MSG_Header_CRC : 4; // LSB // bit(0..3)
-								UInt8 Message_Sequence_No : 1; // bit(4)
-								UInt8 zero : 1; // bit(5)
-								UInt8 End_Of_Message_Transaction : 1; // bit(6)
-								UInt8 Start_Of_Message_Transaction : 1; // MSB // bit(7)
-							} header;
-
-							struct Sideband_MSG_Body {
-								struct Message_Transacion_Request {
-									UInt8 Request_Identifier : 7; // LSB
-									UInt8 zero : 1; // MSB
-									union Request_Data {
-										union {
-											struct __attribute__((packed)) __attribute__((aligned(1))) {
-												UInt32 Number_Of_Bytes_To_Read : 8  __attribute__((packed)) __attribute__((aligned(1))); // LSB of 32 bits
-												UInt32 DPCD_Address : 20;
-												UInt32 Port_Number : 4; // MSB of 32 bits
-												UInt8 end;
-											} bits;
-											UInt32 raw __attribute__((packed)) __attribute__((aligned(1))); // use this to swap the bits
-										} Remote_DPCD_Read;
-										struct {
-											UInt8 Port_Number : 4; // LSB
-											UInt8 Number_Of_I2C_Transactions : 2; // MSB
-											UInt8 zeros : 2; // MSB
-											struct I2C_Transaction Transactions; // ...
-										} Remote_I2C_Read;
-									} data;
-								} request;
-							} body;
-						} Sideband_MSG2;
-
-						typedef struct __attribute__((packed)) __attribute__((aligned(1))) {
-							struct Sideband_MSG_Body_2 {
-								UInt8 Sideband_MSG_Body_CRC;
-							} body;
-							UInt8 end;
-						} Sideband_MSG3;
-						
-						UInt8 senddata[10];
-						UInt8 replydata[32];
-						memset(senddata, 0xff, sizeof(senddata));
-						memset(replydata, 0xff, sizeof(replydata));
-
-						Sideband_MSG1 *msg1 = (void*)&senddata;
-						Sideband_MSG2 *msg2 = (void*)&msg1->header.Relative_Address + pathLength / 2; // pathlength 1 & 2 = 1 byte, pathlength 3 & 4 = 2 bytes, ... (since path[0] is port number)
-						Sideband_MSG3 *msg3 = (void*)&msg2->body.request.data.Remote_DPCD_Read.bits.end;
-
-						msg1->header.Link_Count_Total = pathLength;
-						msg1->header.Link_Count_Remaining = pathLength - 1;
-						bzero(&msg1->header.Relative_Address, pathLength / 2);
-						for (int i = 0; i < pathLength - 1; i++) {
-							msg1->header.Relative_Address[i / 2] |= path[i + 1] << ((i^1) * 4);
-						}
-						msg2->header.Broadcast_Message = 0;
-						msg2->header.Path_Message = 0;
-						msg2->header.Sideband_MSG_Body_Length = (void*)&msg3->end - (void*)&msg2->body; // the CRC is part of the MSG_Body_Length
-						
-						msg2->header.Start_Of_Message_Transaction = 1;
-						msg2->header.End_Of_Message_Transaction = 1;
-						msg2->header.zero = 0;
-						msg2->header.Message_Sequence_No = 0;
-						msg2->header.Sideband_MSG_Header_CRC = crc4(senddata, ((void*)&msg2->body - (void*)&msg1->header) * 2 - 1); // 2 nibbles per byte - exclude the nibble for the 4-bit CRC
-						
-						msg2->body.request.zero = 0;
-						msg2->body.request.Request_Identifier = DP_REMOTE_DPCD_READ;
-						msg2->body.request.data.Remote_DPCD_Read.bits.Port_Number = path[0];
-						msg2->body.request.data.Remote_DPCD_Read.bits.DPCD_Address = dpcdAddr;
-						msg2->body.request.data.Remote_DPCD_Read.bits.Number_Of_Bytes_To_Read = DP_AUX_MAX_PAYLOAD_BYTES;
-						msg2->body.request.data.Remote_DPCD_Read.raw = CFSwapInt32HostToBig(msg2->body.request.data.Remote_DPCD_Read.raw);
-						msg3->body.Sideband_MSG_Body_CRC = crc8((void*)&msg2->body, msg2->header.Sideband_MSG_Body_Length);
-
-						bzero(&request, sizeof(request));
-						request.sendTransactionType = kIOI2CDisplayPortNativeTransactionType;
-						request.sendAddress = DP_SIDEBAND_MSG_DOWN_REQ_BASE;
-						request.sendBuffer = (vm_address_t) msg1;
-						request.sendBytes = (UInt32)((void*)&msg3->end - (void*)&msg1->header);
-
-						if (!dpcdAddr) {
-							iprintf("{\n"); INDENT
-							iprintf("(message:");
-							for (int i = 0; i < request.sendBytes; i++) {
-								cprintf(" %02X", ((UInt8*)request.sendBuffer)[i]);
-							}
-							cprintf(")\n");
-							iprintf("(lct=%d lcr=%d dst=",
-								msg1->header.Link_Count_Total,
-								msg1->header.Link_Count_Remaining
-							);
-							for (int i = 0; i < msg1->header.Link_Count_Total - 1; i++) {
-								cprintf("%s%d", i > 0 ? "." : "", (msg1->header.Relative_Address[i / 2] >> ((i & 1) ? 4 : 0)) & 15);
-							}
-							cprintf(" broadcast=%d path=%d len=%d somt=%d eomt=%d seq=%d crc=0x%x)\n",
-								msg2->header.Broadcast_Message,
-								msg2->header.Path_Message,
-								msg2->header.Sideband_MSG_Body_Length,
-								msg2->header.Start_Of_Message_Transaction,
-								msg2->header.End_Of_Message_Transaction,
-								msg2->header.Message_Sequence_No,
-								msg2->header.Sideband_MSG_Header_CRC
-							);
-
-							iprintf("(type=");
-							switch (msg2->body.request.Request_Identifier) {
-								case DP_GET_MSG_TRANSACTION_VERSION:
-									cprintf("GET_MSG_TRANSACTION_VERSION");
-									break;
-								case DP_LINK_ADDRESS:
-									cprintf("LINK_ADDRESS");
-									break;
-								case DP_CONNECTION_STATUS_NOTIFY:
-									cprintf("CONNECTION_STATUS_NOTIFY");
-									break;
-								case DP_ENUM_PATH_RESOURCES:
-									cprintf("ENUM_PATH_RESOURCES");
-									break;
-								case DP_ALLOCATE_PAYLOAD:
-									cprintf("ALLOCATE_PAYLOAD");
-									break;
-								case DP_QUERY_PAYLOAD:
-									cprintf("QUERY_PAYLOAD");
-									break;
-								case DP_RESOURCE_STATUS_NOTIFY:
-									cprintf("RESOURCE_STATUS_NOTIFY");
-									break;
-								case DP_CLEAR_PAYLOAD_ID_TABLE:
-									cprintf("CLEAR_PAYLOAD_ID_TABLE");
-									break;
-								case DP_REMOTE_DPCD_READ:
-									cprintf("REMOTE_DPCD_READ");
-									msg2->body.request.data.Remote_DPCD_Read.raw = CFSwapInt32HostToBig(msg2->body.request.data.Remote_DPCD_Read.raw);
-									cprintf(" port=%d, dpcd=%05x bytestoread=%d crc=0x%02x",
-										msg2->body.request.data.Remote_DPCD_Read.bits.Port_Number,
-										msg2->body.request.data.Remote_DPCD_Read.bits.DPCD_Address,
-										msg2->body.request.data.Remote_DPCD_Read.bits.Number_Of_Bytes_To_Read,
-										msg3->body.Sideband_MSG_Body_CRC
-									);
-									msg2->body.request.data.Remote_DPCD_Read.raw = CFSwapInt32HostToBig(msg2->body.request.data.Remote_DPCD_Read.raw);
-									break;
-								case DP_REMOTE_DPCD_WRITE:
-									cprintf("REMOTE_DPCD_WRITE");
-									break;
-								case DP_REMOTE_I2C_READ:
-									cprintf("REMOTE_I2C_READ");
-									break;
-								case DP_REMOTE_I2C_WRITE:
-									cprintf("REMOTE_I2C_WRITE");
-									break;
-								case DP_POWER_UP_PHY:
-									cprintf("POWER_UP_PHY");
-									break;
-								case DP_POWER_DOWN_PHY:
-									cprintf("POWER_DOWN_PHY");
-									break;
-								case DP_SINK_EVENT_NOTIFY:
-									cprintf("SINK_EVENT_NOTIFY");
-									break;
-								case DP_QUERY_STREAM_ENC_STATUS:
-									cprintf("QUERY_STREAM_ENC_STATUS");
-									break;
-								default:
-									cprintf("?0x%x", msg2->body.request.Request_Identifier);
-									break;
-							} // switch
-							cprintf(")\n");
-						} // if !dpcdAddr
-
-						/*
-						result = IOI2CSendRequest(i2cconnect, kNilOptions, &request);
-						usleep(kDelayDisplayPortReply);
-						if (result || request.result) {
-							continue;
-						}
-						*/
-
-						Message_Transaction_Reply *reply = (void*)&replydata;
-						//NSLog(@"hello");
-						for (int poll = 0; poll < 1 * (dpcdAddr ? 1 : 1000); poll++) {
-							if (poll > 0) bzero(&request, sizeof(request));
-							request.replyTransactionType = kIOI2CDisplayPortNativeTransactionType;
-							request.replyAddress = DP_SIDEBAND_MSG_DOWN_REP_BASE;
-							request.replyBuffer = (vm_address_t) replydata;
-							request.replyBytes = 1;
-							result = IOI2CSendRequest(i2cconnect, kNilOptions, &request);
-							//usleep(kDelayDisplayPortReply);
-							if (result || request.result) {
-								continue;
-							}
-							if (reply->Request_Identifier == msg2->body.request.Request_Identifier) {
-								break;
-							}
-							else {
-								result = -1;
-								continue;
-							}
-						}
-						if (!dpcdAddr) {
-							iprintf("(reply:");
-							for (int i = 0; i < DP_AUX_MAX_PAYLOAD_BYTES; i++) {
-								cprintf(" %02X", replydata[i]);
-							}
-							cprintf(")\n");
-
-							switch (reply->Reply_Type) {
-								case DP_SIDEBAND_REPLY_NAK:
-									iprintf("(reply_type=NAK guid=%08x-%04x-%04x-%04x-%02x%02x%02x%02x%02x%02x reason=",
-										*(UInt32*)((void*)&reply->data.NAK.Global_Unique_Identifier + 0),
-										*(UInt16*)((void*)&reply->data.NAK.Global_Unique_Identifier + 4),
-										*(UInt16*)((void*)&reply->data.NAK.Global_Unique_Identifier + 6),
-										*(UInt16*)((void*)&reply->data.NAK.Global_Unique_Identifier + 8),
-										*(UInt8*)((void*)&reply->data.NAK.Global_Unique_Identifier + 10),
-										*(UInt8*)((void*)&reply->data.NAK.Global_Unique_Identifier + 11),
-										*(UInt8*)((void*)&reply->data.NAK.Global_Unique_Identifier + 12),
-										*(UInt8*)((void*)&reply->data.NAK.Global_Unique_Identifier + 13),
-										*(UInt8*)((void*)&reply->data.NAK.Global_Unique_Identifier + 14),
-										*(UInt8*)((void*)&reply->data.NAK.Global_Unique_Identifier + 15)
-									);
-									switch (reply->data.NAK.Reason_For_NAK) {
-										case DP_NAK_WRITE_FAILURE:
-											cprintf("DP_NAK_WRITE_FAILURE");
-											break;
-										case DP_NAK_INVALID_READ:
-											cprintf("DP_NAK_INVALID_READ");
-											break;
-										case DP_NAK_CRC_FAILURE:
-											cprintf("DP_NAK_CRC_FAILURE");
-											break;
-										case DP_NAK_BAD_PARAM:
-											cprintf("DP_NAK_BAD_PARAM");
-											break;
-										case DP_NAK_DEFER:
-											cprintf("DP_NAK_DEFER");
-											break;
-										case DP_NAK_LINK_FAILURE:
-											cprintf("DP_NAK_LINK_FAILURE");
-											break;
-										case DP_NAK_NO_RESOURCES:
-											cprintf("DP_NAK_NO_RESOURCES");
-											break;
-										case DP_NAK_DPCD_FAIL:
-											cprintf("DP_NAK_DPCD_FAIL");
-											break;
-										case DP_NAK_I2C_NAK:
-											cprintf("DP_NAK_I2C_NAK");
-											break;
-										case DP_NAK_ALLOCATE_FAIL:
-											cprintf("DP_NAK_ALLOCATE_FAIL");
-											break;
-										default:
-											cprintf("DP_NAK_ALLOCATE_FAIL");
-											break;
-									}
-									break;
-								case DP_SIDEBAND_REPLY_ACK:
-									iprintf("(reply_type=ACK type=");
-									switch (reply->Request_Identifier) {
-										case DP_GET_MSG_TRANSACTION_VERSION:
-											cprintf("GET_MSG_TRANSACTION_VERSION");
-											break;
-										case DP_LINK_ADDRESS:
-											cprintf("LINK_ADDRESS");
-											break;
-										case DP_CONNECTION_STATUS_NOTIFY:
-											cprintf("CONNECTION_STATUS_NOTIFY");
-											break;
-										case DP_ENUM_PATH_RESOURCES:
-											cprintf("ENUM_PATH_RESOURCES");
-											break;
-										case DP_ALLOCATE_PAYLOAD:
-											cprintf("ALLOCATE_PAYLOAD");
-											break;
-										case DP_QUERY_PAYLOAD:
-											cprintf("QUERY_PAYLOAD");
-											break;
-										case DP_RESOURCE_STATUS_NOTIFY:
-											cprintf("RESOURCE_STATUS_NOTIFY");
-											break;
-										case DP_CLEAR_PAYLOAD_ID_TABLE:
-											cprintf("CLEAR_PAYLOAD_ID_TABLE");
-											break;
-										case DP_REMOTE_DPCD_READ:
-											cprintf("REMOTE_DPCD_READ");
-											/*
-											UInt8 Port_Number : 4; // LSB
-											UInt8 zeros : 4; // MSB
-											UInt8 Number_Of_Bytes_Read;
-											UInt8 Data_Read[1];
-											*/
-											break;
-										case DP_REMOTE_DPCD_WRITE:
-											cprintf("REMOTE_DPCD_WRITE");
-											break;
-										case DP_REMOTE_I2C_READ:
-											cprintf("REMOTE_I2C_READ");
-											/*
-											UInt8 Port_Number : 4; // LSB
-											UInt8 zeros : 4; // MSB
-											UInt8 Number_Of_Bytes_Read;
-											UInt8 Data_Read[1];
-											*/
-											break;
-										case DP_REMOTE_I2C_WRITE:
-											cprintf("REMOTE_I2C_WRITE");
-											break;
-										case DP_POWER_UP_PHY:
-											cprintf("POWER_UP_PHY");
-											break;
-										case DP_POWER_DOWN_PHY:
-											cprintf("POWER_DOWN_PHY");
-											break;
-										case DP_SINK_EVENT_NOTIFY:
-											cprintf("SINK_EVENT_NOTIFY");
-											break;
-										case DP_QUERY_STREAM_ENC_STATUS:
-											cprintf("QUERY_STREAM_ENC_STATUS");
-											break;
-										default:
-											cprintf("?0x%x", reply->Request_Identifier);
-											break;
-									} // switch reply->Request_Identifier
-									break;
-							} // switch reply->Reply_Type
-
-							cprintf(")\n");
-							OUTDENT iprintf("}\n");
-						} // if !dpcdAddr
-
-						if (reply->Request_Identifier == msg2->body.request.Request_Identifier) {
-							bzero(&request, sizeof(request));
-							request.replyTransactionType = kIOI2CDisplayPortNativeTransactionType;
-							request.replyAddress = DP_SIDEBAND_MSG_DOWN_REP_BASE + DP_AUX_MAX_PAYLOAD_BYTES;
-							request.replyBuffer = (vm_address_t) replydata + DP_AUX_MAX_PAYLOAD_BYTES;
-							request.replyBytes = DP_AUX_MAX_PAYLOAD_BYTES;
-							result = IOI2CSendRequest(i2cconnect, kNilOptions, &request);
-							//usleep(kDelayDisplayPortReply);
-							if (result || request.result) {
-								continue;
-							}
-						}
-						else {
-							result = -1;
-							continue;
-						}
-
-					}
-					else {
-						bzero(&request, sizeof(request));
-						request.replyTransactionType = kIOI2CDisplayPortNativeTransactionType;
-						request.replyAddress = dpcdAddr;
-						request.replyBuffer = (vm_address_t) &dpcd[dpcdAddr];
-						request.replyBytes = DP_AUX_MAX_PAYLOAD_BYTES;
-						result = IOI2CSendRequest(i2cconnect, kNilOptions, &request);
-						usleep(kDelayDisplayPortReply);
-						if (result || request.result) {
-							continue;
-						}
-					}
-
+				if (result || dperr) {
+					iprintf("(%05xh:%s%s)\n", dpcdAddr, DpErrorStr(dperr), DumpOneReturn(resultStr, sizeof(resultStr), result));
+				}
+				if (!result) {
 					break;
-				} // for attempt
+				}
+				if (dperr == dpErrSequenceMismatch) {
+					usleep(4 * 1000000); // wait four seconds to timeout the messages before retrying
+					maxattempts = 3;
+					continue;
+				}
+				if (dperr == dpErrCrc) {
+					maxattempts = 3;
+					continue;
+				}
+				if (dperr == dpErrNak) {
+					dpcdAddr = 0; // pretend that we NAK'ed on the first address which cause all other addresses to be skipped
+					break;
+				}
+			} // for attempt
 
-				hasError = false;
-				if (result) {
-					iprintf("(%05xh: request error:%x)\n", dpcdAddr, result);
-					hasError = true;
+			hasError = false;
+			if (result) {
+				if (attempt > 1) {
+					iprintf("(%05xh:%s%s after %d attempts)\n", dpcdAddr, DpErrorStr(dperr), DumpOneReturn(resultStr, sizeof(resultStr), result), attempt);
 				}
-				if (request.result) {
-					iprintf("(%05xh: IOI2CSendRequest error:%x)\n", dpcdAddr, request.result);
-					hasError = true;
-				}
-				if (hasError && dpcdAddr == 0) {
-					break; // if we can't read dpcd 00000h then it's probably not a DisplayPort device
-				}
-			} // for dpcdAddr
-			if (hasError && dpcdAddr == 0) {
-				break;
+				hasError = true;
 			}
-		} // for dpcdRangeNdx
-		if (dpcdRangeNdx > 0) {
-			parsedpcd(dpcd);
-			
-			if (dpcd[DP_MSTM_CAP] & DP_MST_CAP) { // 0x021   /* 1.2 */
 
-				int numPorts = dpcd[DP_DOWN_STREAM_PORT_COUNT] & DP_PORT_COUNT_MASK;
-				for (int port = 0; port < numPorts; port++) {
-					path[pathLength] = port;
-					iprintf("Port %d = {\n", port); INDENT
-					DoOneDisplayPort(i2cconnect, path, pathLength + 1);
-					OUTDENT iprintf("}; // Port %d\n", port);
+			if (hasError && dpcdAddr == 0) {
+				break; // if we can't read dpcd 00000h then it's probably not a DisplayPort device
+			}
+		} // for dpcdAddr
+		if (hasError && dpcdAddr == 0) {
+			break;
+		}
+	} // for dpcdRangeNdx
+	if (dpcdRangeNdx > 0) {
+		parsedpcd(dpcd);
+		
+		int numPorts = dpcd[DP_DOWN_STREAM_PORT_COUNT] & DP_PORT_COUNT_MASK;
+		if (numPorts) {
+			Sideband_MSG_Body *link_address_body;
+			int link_address_body_Length;
+			
+            if (pathLength > 0) {
+                path[pathLength] = path[0];
+            }
+            path[0] = 0;
+            pathLength++;
+            
+			gDumpSidebandMessage = kReq | kRep;
+			bool diddump = gDumpSidebandMessage & kRep;
+			IOReturn link_address_result = mst_req_link_address(ioFramebufferService, i2cconnect, path, pathLength, &link_address_body, &link_address_body_Length, &dperr);
+			gDumpSidebandMessage = 0;
+			if (link_address_result) {
+				iprintf("LINK_ADDRESS%s%s\n", DpErrorStr(dperr), DumpOneReturn(resultStr, sizeof(resultStr), link_address_result));
+			}
+			else {
+                if (!diddump) {
+                    DumpOneDisplayPortMessageBody(link_address_body, link_address_body_Length, true);
+                    cprintf("\n");
+                }
+            }
+
+            if (!link_address_result) {
+				int portIndex;
+				Link_Address_Port *port;
+
+				
+				for (
+					portIndex = 0, port = link_address_body->reply.ACK.Link_Address.Ports;
+					portIndex < link_address_body->reply.ACK.Link_Address.Number_Of_Ports;
+					portIndex++, port = port->Input_Port ? (Link_Address_Port *)&port->Input.end : (Link_Address_Port *)&port->Output.end
+				) {
 				} // for port
 
-			} // if mst
-		} // if dpcd
+				
+				for (
+					portIndex = 0, port = link_address_body->reply.ACK.Link_Address.Ports;
+					portIndex < link_address_body->reply.ACK.Link_Address.Number_Of_Ports;
+					portIndex++, port = port->Input_Port ? (Link_Address_Port *)&port->Input.end : (Link_Address_Port *)&port->Output.end
+				) {
+					if (!port->Input_Port) {
+                        path[0] = port->Port_Number;
+						iprintf("Port %d = {\n", port->Port_Number); INDENT
 
-		free(dpcd);
-	} // if dpcd
+                        {
+                            Sideband_MSG_Body *enum_path_resources_body;
+                            int enum_path_resources_body_Length;
+                            path[0] = port->Port_Number;
+
+                            gDumpSidebandMessage = kReq | kRep;
+                            bool diddump = gDumpSidebandMessage & kRep;
+                            IOReturn enum_path_resoruces_result = mst_req_enum_path_resources(ioFramebufferService, i2cconnect, path, pathLength, &enum_path_resources_body, &enum_path_resources_body_Length, &dperr);
+                            gDumpSidebandMessage = 0;
+                            if (enum_path_resoruces_result) {
+                                iprintf("ENUM_PATH_RESOURCES%s%s\n", DpErrorStr(dperr), DumpOneReturn(resultStr, sizeof(resultStr), enum_path_resoruces_result));
+                            }
+                            else {
+                                if (!diddump) {
+                                    DumpOneDisplayPortMessageBody(enum_path_resources_body, enum_path_resources_body_Length, true);
+                                    cprintf("\n");
+                                }
+                            }
+                        }
+
+                        if (port->Peer_Device_Type) {
+                            DoOneDisplayPort(ioFramebufferService, i2cconnect, path, pathLength, shorttest);
+                        }
+                        OUTDENT iprintf("}; // Port %d\n", port->Port_Number);
+					}
+				} // for port
+				
+				
+				free(link_address_body);
+			} // if !link_address_result
+		} // if numPorts
+	} // if dpcdRangeNdx
+
+	free(dpcd);
 } // DoOneDisplayPort
 
-CFMutableDictionaryRef DumpDisplayParameters(char *parametersName, CFDictionaryRef dictDisplayParameters0) {
+CFMutableDictionaryRef DumpDisplayParameters(const char *parametersName, CFDictionaryRef dictDisplayParameters0) {
 	iprintf("%s = {\n", parametersName); INDENT
 
 	CFMutableDictionaryRef dictDisplayParameters = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, dictDisplayParameters0);
 	if (dictDisplayParameters) {
 		CFIndex itemCount = CFDictionaryGetCount(dictDisplayParameters);
 
-		const void **keys   = malloc(itemCount * sizeof(void*));
-		const void **values = malloc(itemCount * sizeof(void*));
+		const void **keys   = (const void **)malloc(itemCount * sizeof(void*));
+		const void **values = (const void **)malloc(itemCount * sizeof(void*));
 		CFDictionaryGetKeysAndValues(dictDisplayParameters, keys, values);
 
 		for (int i = 0; i < itemCount; i++) {
 			char key[50];
-			if (CFStringGetCString(keys[i], key , sizeof(key), kCFStringEncodingUTF8)) {
+			if (CFStringGetCString((CFStringRef)keys[i], key , sizeof(key), kCFStringEncodingUTF8)) {
 				if (CFGetTypeID(values[i]) == CFDictionaryGetTypeID()) {
-					CFMutableDictionaryRef parameterDict = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, values[i]);
+					CFMutableDictionaryRef parameterDict = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, (CFDictionaryRef)values[i]);
 					if (parameterDict) {
-						CFNumberRef min = CFDictionaryGetValue(parameterDict, CFSTR(kIODisplayMinValueKey));
-						CFNumberRef max = CFDictionaryGetValue(parameterDict, CFSTR(kIODisplayMaxValueKey));
-						CFNumberRef val = CFDictionaryGetValue(parameterDict, CFSTR(kIODisplayValueKey   ));
+						CFNumberRef min = (CFNumberRef)CFDictionaryGetValue(parameterDict, CFSTR(kIODisplayMinValueKey));
+						CFNumberRef max = (CFNumberRef)CFDictionaryGetValue(parameterDict, CFSTR(kIODisplayMaxValueKey));
+						CFNumberRef val = (CFNumberRef)CFDictionaryGetValue(parameterDict, CFSTR(kIODisplayValueKey   ));
 						if (min && max && val && CFGetTypeID(min) == CFNumberGetTypeID() && CFGetTypeID(max) == CFNumberGetTypeID() && CFGetTypeID(val) == CFNumberGetTypeID()) {
 							SInt32 val_min = 0;
 							SInt32 val_max = 0;
@@ -1942,7 +1314,7 @@ CFMutableDictionaryRef DumpDisplayParameters(char *parametersName, CFDictionaryR
 							CFNumberGetValue(max, kCFNumberSInt32Type, &val_max);
 							CFNumberGetValue(val, kCFNumberSInt32Type, &val_val);
 							
-							char *name;
+							const char *name;
 							bool isFixedPoint = 0;
 							
 							/**/ if(!strcmp(key, kIODisplayBrightnessProbeKey        )) { name = "kIODisplayBrightnessProbeKey"; }
@@ -2039,6 +1411,285 @@ CFMutableDictionaryRef DumpDisplayParameters(char *parametersName, CFDictionaryR
 } // DumpDisplayParameters
 
 
+CFMutableDictionaryRef DumpDisplayFloatParameters(const char *parametersName, CFDictionaryRef dictDisplayParameters0) {
+	iprintf("%s = {\n", parametersName); INDENT
+
+	CFMutableDictionaryRef dictDisplayParameters = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, dictDisplayParameters0);
+	if (dictDisplayParameters) {
+		CFIndex itemCount = CFDictionaryGetCount(dictDisplayParameters);
+
+		const void **keys   = (const void **)malloc(itemCount * sizeof(void*));
+		const void **values = (const void **)malloc(itemCount * sizeof(void*));
+		CFDictionaryGetKeysAndValues(dictDisplayParameters, keys, values);
+
+		for (int i = 0; i < itemCount; i++) {
+			char key[50];
+			if (CFStringGetCString((CFStringRef)keys[i], key , sizeof(key), kCFStringEncodingUTF8)) {
+				if (CFGetTypeID(values[i]) == CFDictionaryGetTypeID()) {
+					CFMutableDictionaryRef parameterDict = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, (CFDictionaryRef)values[i]);
+					if (parameterDict) {
+						CFNumberRef min = (CFNumberRef)CFDictionaryGetValue(parameterDict, CFSTR(kIODisplayMinValueKey));
+						CFNumberRef max = (CFNumberRef)CFDictionaryGetValue(parameterDict, CFSTR(kIODisplayMaxValueKey));
+						CFNumberRef val = (CFNumberRef)CFDictionaryGetValue(parameterDict, CFSTR(kIODisplayValueKey   ));
+						if (min && max && val && CFGetTypeID(min) == CFNumberGetTypeID() && CFGetTypeID(max) == CFNumberGetTypeID() && CFGetTypeID(val) == CFNumberGetTypeID()) {
+							SInt32 val_min = 0;
+							SInt32 val_max = 0;
+							SInt32 val_val = 0;
+							CFNumberGetValue(min, kCFNumberSInt32Type, &val_min);
+							CFNumberGetValue(max, kCFNumberSInt32Type, &val_max);
+							CFNumberGetValue(val, kCFNumberSInt32Type, &val_val);
+							
+							const char *name;
+							bool isFixedPoint = 0;
+							
+							/**/ if(!strcmp(key, kIODisplayBrightnessProbeKey        )) { name = "kIODisplayBrightnessProbeKey"; }
+							else if(!strcmp(key, kIODisplayLinearBrightnessProbeKey  )) { name = "kIODisplayLinearBrightnessProbeKey"; }
+							else if(!strcmp(key, kIODisplayBrightnessKey             )) { name = "kIODisplayBrightnessKey"; }
+							else if(!strcmp(key, kIODisplayLinearBrightnessKey       )) { name = "kIODisplayLinearBrightnessKey"; }
+							else if(!strcmp(key, kIODisplayUsableLinearBrightnessKey )) { name = "kIODisplayUsableLinearBrightnessKey"; }
+							else if(!strcmp(key, kIODisplayBrightnessFadeKey         )) { name = "kIODisplayBrightnessFadeKey"; }
+							else if(!strcmp(key, kIODisplayContrastKey               )) { name = "kIODisplayContrastKey"; }
+							else if(!strcmp(key, kIODisplayHorizontalPositionKey     )) { name = "kIODisplayHorizontalPositionKey"; }
+							else if(!strcmp(key, kIODisplayHorizontalSizeKey         )) { name = "kIODisplayHorizontalSizeKey"; }
+							else if(!strcmp(key, kIODisplayVerticalPositionKey       )) { name = "kIODisplayVerticalPositionKey"; }
+							else if(!strcmp(key, kIODisplayVerticalSizeKey           )) { name = "kIODisplayVerticalSizeKey"; }
+							else if(!strcmp(key, kIODisplayTrapezoidKey              )) { name = "kIODisplayTrapezoidKey"; }
+							else if(!strcmp(key, kIODisplayPincushionKey             )) { name = "kIODisplayPincushionKey"; }
+							else if(!strcmp(key, kIODisplayParallelogramKey          )) { name = "kIODisplayParallelogramKey"; }
+							else if(!strcmp(key, kIODisplayRotationKey               )) { name = "kIODisplayRotationKey"; }
+							else if(!strcmp(key, kIODisplayTheatreModeKey            )) { name = "kIODisplayTheatreModeKey"; }
+							else if(!strcmp(key, kIODisplayTheatreModeWindowKey      )) { name = "kIODisplayTheatreModeWindowKey"; }
+							else if(!strcmp(key, kIODisplayOverscanKey               )) { name = "kIODisplayOverscanKey"; }
+							else if(!strcmp(key, kIODisplayVideoBestKey              )) { name = "kIODisplayVideoBestKey"; }
+
+							else if(!strcmp(key, kIODisplaySpeakerVolumeKey          )) { name = "kIODisplaySpeakerVolumeKey"; }
+							else if(!strcmp(key, kIODisplaySpeakerSelectKey          )) { name = "kIODisplaySpeakerSelectKey"; }
+							else if(!strcmp(key, kIODisplayMicrophoneVolumeKey       )) { name = "kIODisplayMicrophoneVolumeKey"; }
+							else if(!strcmp(key, kIODisplayAmbientLightSensorKey     )) { name = "kIODisplayAmbientLightSensorKey"; }
+							else if(!strcmp(key, kIODisplayAudioMuteAndScreenBlankKey)) { name = "kIODisplayAudioMuteAndScreenBlankKey"; }
+							else if(!strcmp(key, kIODisplayAudioTrebleKey            )) { name = "kIODisplayAudioTrebleKey"; }
+							else if(!strcmp(key, kIODisplayAudioBassKey              )) { name = "kIODisplayAudioBassKey"; }
+							else if(!strcmp(key, kIODisplayAudioBalanceLRKey         )) { name = "kIODisplayAudioBalanceLRKey"; }
+							else if(!strcmp(key, kIODisplayAudioProcessorModeKey     )) { name = "kIODisplayAudioProcessorModeKey"; }
+							else if(!strcmp(key, kIODisplayPowerModeKey              )) { name = "kIODisplayPowerModeKey"; }
+							else if(!strcmp(key, kIODisplayManufacturerSpecificKey   )) { name = "kIODisplayManufacturerSpecificKey"; }
+
+							else if(!strcmp(key, kIODisplayPowerStateKey             )) { name = "kIODisplayPowerStateKey"; }
+
+							else if(!strcmp(key, kIODisplayControllerIDKey           )) { name = "kIODisplayControllerIDKey"; }
+							else if(!strcmp(key, kIODisplayCapabilityStringKey       )) { name = "kIODisplayCapabilityStringKey"; }
+
+							else if(!strcmp(key, kIODisplayRedGammaScaleKey          )) { name = "kIODisplayRedGammaScaleKey"; isFixedPoint = true; }
+							else if(!strcmp(key, kIODisplayGreenGammaScaleKey        )) { name = "kIODisplayGreenGammaScaleKey"; isFixedPoint = true; }
+							else if(!strcmp(key, kIODisplayBlueGammaScaleKey         )) { name = "kIODisplayBlueGammaScaleKey"; isFixedPoint = true; }
+							else if(!strcmp(key, kIODisplayGammaScaleKey             )) { name = "kIODisplayGammaScaleKey"; isFixedPoint = true; }
+
+							else if(!strcmp(key, kIODisplayParametersCommitKey       )) { name = "kIODisplayParametersCommitKey"; }
+							else if(!strcmp(key, kIODisplayParametersDefaultKey      )) { name = "kIODisplayParametersDefaultKey"; }
+							else if(!strcmp(key, kIODisplayParametersFlushKey        )) { name = "kIODisplayParametersFlushKey"; }
+
+							else if(!strcmp(key, "vblm"                              )) { name = "kConnectionVBLMultiplier"; isFixedPoint = true; }
+
+							else name = key;
+							
+							if (isFixedPoint) {
+								iprintf("%s = %.5f (%g…%g);\n", name, val_val / 65536.0, val_min / 65536.0, val_max / 65536.0);
+							}
+							else {
+								iprintf("%s = %d (%d…%d);\n", name, val_val, val_min, val_max);
+							}
+
+							CFDictionaryRemoveValue(parameterDict, CFSTR(kIODisplayMinValueKey));
+							CFDictionaryRemoveValue(parameterDict, CFSTR(kIODisplayMaxValueKey));
+							CFDictionaryRemoveValue(parameterDict, CFSTR(kIODisplayValueKey   ));
+							if (CFDictionaryGetCount(parameterDict)) {
+								CFDictionarySetValue(dictDisplayParameters, keys[i], parameterDict);
+							}
+							else {
+								CFDictionaryRemoveValue(dictDisplayParameters, keys[i]);
+							}
+
+						} // if min ...
+						
+					} // if parameterDict
+
+				} // if is dict
+
+			} // if key string
+			
+		} // for key
+
+		free(keys);
+		free(values);
+		
+		if (CFDictionaryGetCount(dictDisplayParameters)) {
+			iprintf("%s properties (unparsed) = ", parametersName);
+			CFOutput(dictDisplayParameters);
+			cprintf("; // %s properties (unparsed)\n", parametersName);
+		}
+	} // if dictDisplayParameters
+	else {
+		CFOutput(dictDisplayParameters0);
+	}
+	OUTDENT iprintf("}; // %s\n", parametersName);
+	return dictDisplayParameters;
+} // DumpDisplayFloatParameters
+
+
+#define STRTOORD4(_s) ((_s[0]<<24) | (_s[1]<<16) | (_s[2]<<8) | (_s[3]))
+
+UInt32 attributes[] = {
+	kIOPowerStateAttribute           ,
+	kIOPowerAttribute                ,
+	kIODriverPowerAttribute          ,
+	kIOHardwareCursorAttribute       ,
+	kIOMirrorAttribute               ,
+	kIOMirrorDefaultAttribute        ,
+	kIOCapturedAttribute             ,
+	kIOCursorControlAttribute        ,
+	kIOSystemPowerAttribute          ,
+	kIOWindowServerActiveAttribute   ,
+	kIOVRAMSaveAttribute             ,
+	kIODeferCLUTSetAttribute         ,
+	kIOClamshellStateAttribute       ,
+	kIOFBDisplayPortTrainingAttribute,
+	kIOFBDisplayState                ,
+	kIOFBVariableRefreshRate         ,
+	kIOFBLimitHDCPAttribute          ,
+	kIOFBLimitHDCPStateAttribute     ,
+	kIOFBStop                        ,
+	kIOFBRedGammaScaleAttribute      ,
+	kIOFBGreenGammaScaleAttribute    ,
+	kIOFBBlueGammaScaleAttribute     ,
+	kIOFBHDRMetaDataAttribute        ,
+	kIOBuiltinPanelPowerAttribute    ,
+
+	kIOFBSpeedAttribute                 ,
+	kIOFBWSStartAttribute               ,
+	kIOFBProcessConnectChangeAttribute  ,
+	kIOFBEndConnectChangeAttribute      ,
+	kIOFBMatchedConnectChangeAttribute  ,
+
+	kConnectionInTVMode                 ,
+	kConnectionWSSB                     ,
+	kConnectionRawBacklight             ,
+	kConnectionBacklightSave            ,
+	kConnectionVendorTag                ,
+	
+	kConnectionFlags                    ,
+	
+	kConnectionSyncEnable               ,
+	kConnectionSyncFlags                ,
+	
+	kConnectionSupportsAppleSense       ,
+	kConnectionSupportsLLDDCSense       ,
+	kConnectionSupportsHLDDCSense       ,
+	kConnectionEnable                   ,
+	kConnectionCheckEnable              ,
+	kConnectionProbe                    ,
+	kConnectionIgnore                   ,
+	kConnectionChanged                  ,
+//		kConnectionPower                    , // kIOPowerAttribute
+	kConnectionPostWake                 ,
+	kConnectionDisplayParameterCount    ,
+	kConnectionDisplayParameters        ,
+	kConnectionOverscan                 ,
+	kConnectionVideoBest                ,
+	
+	kConnectionRedGammaScale            ,
+	kConnectionGreenGammaScale          ,
+	kConnectionBlueGammaScale           ,
+	kConnectionGammaScale               ,
+	kConnectionFlushParameters          ,
+	
+	kConnectionVBLMultiplier            ,
+	
+	kConnectionHandleDisplayPortEvent   ,
+	
+	kConnectionPanelTimingDisable       ,
+	
+	kConnectionColorMode                ,
+	kConnectionColorModesSupported      ,
+	kConnectionColorDepthsSupported     ,
+	
+	kConnectionControllerDepthsSupported,
+	kConnectionControllerColorDepth     ,
+	kConnectionControllerDitherControl  ,
+	
+	kConnectionDisplayFlags             ,
+	
+	kConnectionEnableAudio              ,
+	kConnectionAudioStreaming           ,
+	
+	kConnectionStartOfFrameTime         ,
+	
+	kConnectionUnderscan                ,
+	kTempAttribute                      ,
+	STRTOORD4(kIODisplaySelectedColorModeKey),
+	'dith',
+//	'ownr', // this will cause a crash if passed to IODisplayGetFloatParameter
+	0
+};
+
+
+
+static char * GetAttributeCodeStr(char *buf, size_t bufSize, UInt64 attribute, const char * nullStr) {
+	char* atrc = (char*)&attribute;
+	int x = 0;
+	if (attribute & 0xffffffff00000000)
+		x += scnprintf(buf + x, bufSize - x, "?0x%llx", attribute);
+	else {
+		if (atrc[3] || !nullStr) x += scnprintf(buf + x, bufSize - x, "%c", atrc[3]); else x += scnprintf(buf + x, bufSize - x, "%s", nullStr);
+		if (atrc[2] || !nullStr) x += scnprintf(buf + x, bufSize - x, "%c", atrc[2]); else x += scnprintf(buf + x, bufSize - x, "%s", nullStr);
+		if (atrc[1] || !nullStr) x += scnprintf(buf + x, bufSize - x, "%c", atrc[1]); else x += scnprintf(buf + x, bufSize - x, "%s", nullStr);
+		if (atrc[0] || !nullStr) x += scnprintf(buf + x, bufSize - x, "%c", atrc[0]); else x += scnprintf(buf + x, bufSize - x, "%s", nullStr);
+	}
+	return buf;
+} // GetAttributeCodeStr
+
+
+
+void DumpAllParameters(const char *parametersName, io_service_t service) {
+	iprintf("%s = {\n", parametersName); INDENT
+
+	for (UInt32 *attribute = attributes; *attribute; attribute++) {
+		float    fval;
+		SInt32   value;
+		SInt32   min;
+		SInt32   max;
+		IOReturn result1;
+		IOReturn result2;
+		IOReturn result3;
+
+		char	attributename[20];
+		for (int i = 0; i < 2; i++) {
+			// I don't think any attributes/parameters that contain a null character will ever get a result but we'll try:
+			GetAttributeCodeStr(attributename, sizeof(attributename), *attribute, i ? "" : NULL);
+			CFStringRef attributeStr = i ?
+				CFStringCreateWithCString(kCFAllocatorDefault, attributename, kCFStringEncodingUTF8) :
+				CFStringCreateWithBytes(kCFAllocatorDefault, (UInt8*)attributename, 4, kCFStringEncodingUTF8, false);
+
+			fval = 0.0;
+			value = 0;
+			min = 0;
+			max = 0;
+
+			result1 = IODisplayGetFloatParameter(service, kNilOptions, attributeStr, &fval);
+			result2 = IODisplayGetIntegerRangeParameter(service, kNilOptions, attributeStr, &value, &min, &max);
+			result3 = IODisplaySetIntegerParameter(service, kNilOptions, attributeStr, value);
+			CFRelease(attributeStr);
+			if (result1 == kIOReturnSuccess || result2 == kIOReturnSuccess || result3 == kIOReturnSuccess) {
+				iprintf("'%.4s' %f %d (%d..%d)%s\n", attributename, fval, value, min, max, result3 == kIOReturnSuccess ? " (can set)" : "");
+				break;
+			}
+		}
+	}
+	
+	OUTDENT iprintf("}; // %s\n", parametersName);
+} // DumpAllParameters
+
+
+
 CFMutableDictionaryRef DumpI2CProperties(CFDictionaryRef dict)
 {
 	CFMutableDictionaryRef copy = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, dict);
@@ -2099,20 +1750,367 @@ CFMutableDictionaryRef DumpI2CProperties(CFDictionaryRef dict)
 	return copy;
 }
 
+static const char * GetAttributeName(UInt64 attribute, bool forConnection)
+{
+	switch (attribute) {
+		case kIOPowerStateAttribute           : return "kIOPowerStateAttribute";
+		case kIOPowerAttribute                : return forConnection ? "kConnectionPower" : "kIOPowerAttribute";
+		case kIODriverPowerAttribute          : return "kIODriverPowerAttribute";
+		case kIOHardwareCursorAttribute       : return "kIOHardwareCursorAttribute";
+		case kIOMirrorAttribute               : return "kIOMirrorAttribute";
+		case kIOMirrorDefaultAttribute        : return "kIOMirrorDefaultAttribute";
+		case kIOCapturedAttribute             : return "kIOCapturedAttribute";
+		case kIOCursorControlAttribute        : return "kIOCursorControlAttribute";
+		case kIOSystemPowerAttribute          : return "kIOSystemPowerAttribute";
+		case kIOWindowServerActiveAttribute   : return "kIOWindowServerActiveAttribute";
+		case kIOVRAMSaveAttribute             : return "kIOVRAMSaveAttribute";
+		case kIODeferCLUTSetAttribute         : return "kIODeferCLUTSetAttribute";
+		case kIOClamshellStateAttribute       : return "kIOClamshellStateAttribute";
+		case kIOFBDisplayPortTrainingAttribute: return "kIOFBDisplayPortTrainingAttribute";
+		case kIOFBDisplayState                : return "kIOFBDisplayState";
+		case kIOFBVariableRefreshRate         : return "kIOFBVariableRefreshRate";
+		case kIOFBLimitHDCPAttribute          : return "kIOFBLimitHDCPAttribute";
+		case kIOFBLimitHDCPStateAttribute     : return "kIOFBLimitHDCPStateAttribute";
+		case kIOFBStop                        : return "kIOFBStop";
+		case kIOFBRedGammaScaleAttribute      : return "kIOFBRedGammaScaleAttribute";
+		case kIOFBGreenGammaScaleAttribute    : return "kIOFBGreenGammaScaleAttribute";
+		case kIOFBBlueGammaScaleAttribute     : return "kIOFBBlueGammaScaleAttribute";
+		case kIOFBHDRMetaDataAttribute        : return "kIOFBHDRMetaDataAttribute";
+		case kIOBuiltinPanelPowerAttribute    : return "kIOBuiltinPanelPowerAttribute";
+
+		case kIOFBSpeedAttribute                 : return "kIOFBSpeedAttribute";
+		case kIOFBWSStartAttribute               : return "kIOFBWSStartAttribute";
+		case kIOFBProcessConnectChangeAttribute  : return "kIOFBProcessConnectChangeAttribute";
+		case kIOFBEndConnectChangeAttribute      : return "kIOFBEndConnectChangeAttribute";
+		case kIOFBMatchedConnectChangeAttribute  : return "kIOFBMatchedConnectChangeAttribute";
+		// Connection attributes
+		case kConnectionInTVMode                 : return "kConnectionInTVMode";
+		case kConnectionWSSB                     : return "kConnectionWSSB";
+		case kConnectionRawBacklight             : return "kConnectionRawBacklight";
+		case kConnectionBacklightSave            : return "kConnectionBacklightSave";
+		case kConnectionVendorTag                : return "kConnectionVendorTag";
+			
+		case kConnectionFlags                    : return "kConnectionFlags";
+		
+		case kConnectionSyncEnable               : return "kConnectionSyncEnable";
+		case kConnectionSyncFlags                : return "kConnectionSyncFlags";
+		
+		case kConnectionSupportsAppleSense       : return "kConnectionSupportsAppleSense";
+		case kConnectionSupportsLLDDCSense       : return "kConnectionSupportsLLDDCSense";
+		case kConnectionSupportsHLDDCSense       : return "kConnectionSupportsHLDDCSense";
+		case kConnectionEnable                   : return "kConnectionEnable";
+		case kConnectionCheckEnable              : return "kConnectionCheckEnable";
+		case kConnectionProbe                    : return "kConnectionProbe";
+		case kConnectionIgnore                   : return "kConnectionIgnore";
+		case kConnectionChanged                  : return "kConnectionChanged";
+//		case kConnectionPower                    : return "kConnectionPower"; // kIOPowerAttribute
+		case kConnectionPostWake                 : return "kConnectionPostWake";
+		case kConnectionDisplayParameterCount    : return "kConnectionDisplayParameterCount";
+		case kConnectionDisplayParameters        : return "kConnectionDisplayParameters";
+		case kConnectionOverscan                 : return "kConnectionOverscan";
+		case kConnectionVideoBest                : return "kConnectionVideoBest";
+			
+		case kConnectionRedGammaScale            : return "kConnectionRedGammaScale";
+		case kConnectionGreenGammaScale          : return "kConnectionGreenGammaScale";
+		case kConnectionBlueGammaScale           : return "kConnectionBlueGammaScale";
+		case kConnectionGammaScale               : return "kConnectionGammaScale";
+		case kConnectionFlushParameters          : return "kConnectionFlushParameters";
+			
+		case kConnectionVBLMultiplier            : return "kConnectionVBLMultiplier";
+			
+		case kConnectionHandleDisplayPortEvent   : return "kConnectionHandleDisplayPortEvent";
+			
+		case kConnectionPanelTimingDisable       : return "kConnectionPanelTimingDisable";
+			
+		case kConnectionColorMode                : return "kConnectionColorMode";
+		case kConnectionColorModesSupported      : return "kConnectionColorModesSupported";
+		case kConnectionColorDepthsSupported     : return "kConnectionColorDepthsSupported";
+			
+		case kConnectionControllerDepthsSupported: return "kConnectionControllerDepthsSupported";
+		case kConnectionControllerColorDepth     : return "kConnectionControllerColorDepth";
+		case kConnectionControllerDitherControl  : return "kConnectionControllerDitherControl";
+			
+		case kConnectionDisplayFlags             : return "kConnectionDisplayFlags";
+			
+		case kConnectionEnableAudio              : return "kConnectionEnableAudio";
+		case kConnectionAudioStreaming           : return "kConnectionAudioStreaming";
+			
+		case kConnectionStartOfFrameTime         : return "kConnectionStartOfFrameTime";
+			
+		case kConnectionUnderscan                : return "kConnectionUnderscan";
+		case kTempAttribute                      : return "kTempAttribute";
+		case STRTOORD4(kIODisplaySelectedColorModeKey) : return "kIODisplaySelectedColorModeKey";
+
+		default                               : return NULL;
+	}
+} // GetAttributeName
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+void DumpOneAttribute(UInt64 attribute, bool set, bool forConnection, void *valuePtr, size_t len, bool align = true);
+#ifdef __cplusplus
+}
+#endif
+
+void DumpOneAttribute(UInt64 attribute, bool set, bool forConnection, void *valuePtr, size_t len, bool align)
+{
+	char valueStr[500];
+	char attributename[20];
+
+	char* buf = valueStr;
+	size_t bufSize = sizeof(valueStr);
+	
+	const char* name = GetAttributeName(attribute, forConnection);
+
+	size_t inc;
+	if (!valuePtr) {
+		switch (attribute) {
+			case kConnectionChanged:
+			case kConnectionSupportsAppleSense:
+			case kConnectionSupportsHLDDCSense:
+			case kConnectionSupportsLLDDCSense:
+				inc = scnprintf(buf, bufSize, "n/a");
+				break;
+			default:
+				inc = scnprintf(buf, bufSize, "NULL");
+				break;
+		}
+		buf += inc; bufSize -= inc;
+	}
+	else {
+		UInt64 value = 0;
+		inc = 0;
+		switch (len) {
+			case 1: value = *(UInt8 *)valuePtr; inc = scnprintf(buf, bufSize, "0x%02llx : ", value); break;
+			case 2: value = *(UInt16*)valuePtr; inc = scnprintf(buf, bufSize, "0x%04llx : ", value); break;
+			case 4: value = *(UInt32*)valuePtr; inc = scnprintf(buf, bufSize, "0x%08llx : ", value); break;
+			case 8:
+				if (attribute != kConnectionDisplayParameters) {
+					value = *(UInt64*)valuePtr;
+					int hexdigits =
+						(value >> 32) ?
+							(value >> 32) == 0x0ffffffff ?
+								8
+							:
+								16
+						:
+							8;
+					if (hexdigits == 8) value &= 0x0ffffffff;
+					inc = scnprintf(buf, bufSize, "0x%0*llx : ", hexdigits, value);
+				}
+				break;
+		}
+		buf += inc; bufSize -= inc;
+
+		switch (attribute) {
+			case kConnectionFlags:
+				scnprintf(buf, bufSize, "%s%s%s",
+					value & kIOConnectionBuiltIn    ?    "BuiltIn," : "",
+					value & kIOConnectionStereoSync ? "StereoSync," : "",
+					UNKNOWN_FLAG(value & 0xffff77ff)
+				); break;
+
+			case kConnectionSyncFlags:
+				scnprintf(buf, bufSize, "%s%s%s%s%s%s%s%s%s",
+					value & kIOHSyncDisable          ?          "HSyncDisable," : "",
+					value & kIOVSyncDisable          ?          "VSyncDisable," : "",
+					value & kIOCSyncDisable          ?          "CSyncDisable," : "",
+					value & kIONoSeparateSyncControl ? "NoSeparateSyncControl," : "",
+					value & kIOTriStateSyncs         ?         "TriStateSyncs," : "",
+					value & kIOSyncOnBlue            ?            "SyncOnBlue," : "",
+					value & kIOSyncOnGreen           ?           "SyncOnGreen," : "",
+					value & kIOSyncOnRed             ?             "SyncOnRed," : "",
+					UNKNOWN_FLAG(value & 0xffffff00)
+				); break;
+
+			case kConnectionHandleDisplayPortEvent:
+				if (set) {
+					scnprintf(buf, bufSize, "%s",
+						value == kIODPEventStart                       ?                       "Start" :
+						value == kIODPEventIdle                        ?                        "Idle" :
+						value == kIODPEventForceRetrain                ?                "ForceRetrain" :
+						value == kIODPEventRemoteControlCommandPending ? "RemoteControlCommandPending" :
+						value == kIODPEventAutomatedTestRequest        ?        "AutomatedTestRequest" :
+						value == kIODPEventContentProtection           ?           "ContentProtection" :
+						value == kIODPEventMCCS                        ?                        "MCCS" :
+						value == kIODPEventSinkSpecific                ?                "SinkSpecific" :
+						UNKNOWN_VALUE(value)
+					);
+				}
+				else {
+					for (int i=0; i < len; i++) {
+						inc = scnprintf(buf, bufSize, "%02x", ((UInt8*)valuePtr)[i]);
+						buf += inc; bufSize -= inc;
+					}
+				}
+				break;
+
+			case kConnectionColorMode:
+			case kConnectionColorModesSupported:
+				scnprintf(buf, bufSize, "%s%s%s%s%s%s%s",
+					value == kIODisplayColorModeReserved  ?    "Reserved" : "",
+					value & kIODisplayColorModeRGB        ?        "RGB," : "",
+					value & kIODisplayColorModeYCbCr422   ?        "422," : "",
+					value & kIODisplayColorModeYCbCr444   ?        "444," : "",
+					value & kIODisplayColorModeRGBLimited ? "RGBLimited," : "",
+					value & kIODisplayColorModeAuto       ?       "Auto," : "",
+					UNKNOWN_FLAG(value & 0xefffeeee)
+				); break;
+
+			case kConnectionColorDepthsSupported:
+			case kConnectionControllerDepthsSupported:
+			case kConnectionControllerColorDepth:
+				scnprintf(buf, bufSize, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
+					value == kIODisplayRGBColorComponentBitsUnknown ? "Unknown" : "",
+					value & kIODisplayRGBColorComponentBits6        ?  "RGB 6," : "",
+					value & kIODisplayRGBColorComponentBits8        ?  "RGB 8," : "",
+					value & kIODisplayRGBColorComponentBits10       ? "RGB 10," : "",
+					value & kIODisplayRGBColorComponentBits12       ? "RGB 12," : "",
+					value & kIODisplayRGBColorComponentBits14       ? "RGB 14," : "",
+					value & kIODisplayRGBColorComponentBits16       ? "RGB 16," : "",
+					value & kIODisplayYCbCr444ColorComponentBits6   ?  "444 6," : "",
+					value & kIODisplayYCbCr444ColorComponentBits8   ?  "444 8," : "",
+					value & kIODisplayYCbCr444ColorComponentBits10  ? "444 10," : "",
+					value & kIODisplayYCbCr444ColorComponentBits12  ? "444 12," : "",
+					value & kIODisplayYCbCr444ColorComponentBits14  ? "444 14," : "",
+					value & kIODisplayYCbCr444ColorComponentBits16  ? "444 16," : "",
+					value & kIODisplayYCbCr422ColorComponentBits6   ?  "422 6," : "",
+					value & kIODisplayYCbCr422ColorComponentBits8   ?  "422 8," : "",
+					value & kIODisplayYCbCr422ColorComponentBits10  ? "422 10," : "",
+					value & kIODisplayYCbCr422ColorComponentBits12  ? "422 12," : "",
+					value & kIODisplayYCbCr422ColorComponentBits14  ? "422 14," : "",
+					value & kIODisplayYCbCr422ColorComponentBits16  ? "422 16," : "",
+					UNKNOWN_FLAG(value & 0xffc00000)
+				); break;
+
+			case kConnectionControllerDitherControl:
+				scnprintf(buf, bufSize, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
+					((value >> kIODisplayDitherRGBShift     ) & 0xff) == kIODisplayDitherDisable         ?          "RGB Disabled," : "",
+					((value >> kIODisplayDitherRGBShift     ) & 0xff) == kIODisplayDitherAll             ?               "RGB All," : "",
+					((value >> kIODisplayDitherRGBShift     ) & 0xff) & kIODisplayDitherSpatial          ?           "RGB Spatial," : "",
+					((value >> kIODisplayDitherRGBShift     ) & 0xff) & kIODisplayDitherTemporal         ?          "RGB Temporal," : "",
+					((value >> kIODisplayDitherRGBShift     ) & 0xff) & kIODisplayDitherFrameRateControl ?  "RGB FrameRateControl," : "",
+					((value >> kIODisplayDitherRGBShift     ) & 0xff) & kIODisplayDitherDefault          ?           "RGB Default," : "",
+					((value >> kIODisplayDitherRGBShift     ) & 0xff) & 0x70                             ?                 "RGB ?," : "",
+					((value >> kIODisplayDitherYCbCr444Shift) & 0xff) == kIODisplayDitherDisable         ?          "444 Disabled," : "",
+					((value >> kIODisplayDitherYCbCr444Shift) & 0xff) == kIODisplayDitherAll             ?               "444 All," : "",
+					((value >> kIODisplayDitherYCbCr444Shift) & 0xff) & kIODisplayDitherSpatial          ?           "444 Spatial," : "",
+					((value >> kIODisplayDitherYCbCr444Shift) & 0xff) & kIODisplayDitherTemporal         ?          "444 Temporal," : "",
+					((value >> kIODisplayDitherYCbCr444Shift) & 0xff) & kIODisplayDitherFrameRateControl ?  "444 FrameRateControl," : "",
+					((value >> kIODisplayDitherYCbCr444Shift) & 0xff) & kIODisplayDitherDefault          ?           "444 Default," : "",
+					((value >> kIODisplayDitherYCbCr444Shift) & 0xff) & 0x70                             ?                 "444 ?," : "",
+					((value >> kIODisplayDitherYCbCr422Shift) & 0xff) == kIODisplayDitherDisable         ?          "422 Disabled," : "",
+					((value >> kIODisplayDitherYCbCr422Shift) & 0xff) == kIODisplayDitherAll             ?               "422 All," : "",
+					((value >> kIODisplayDitherYCbCr422Shift) & 0xff) & kIODisplayDitherSpatial          ?           "422 Spatial," : "",
+					((value >> kIODisplayDitherYCbCr422Shift) & 0xff) & kIODisplayDitherTemporal         ?          "422 Temporal," : "",
+					((value >> kIODisplayDitherYCbCr422Shift) & 0xff) & kIODisplayDitherFrameRateControl ?  "422 FrameRateControl," : "",
+					((value >> kIODisplayDitherYCbCr422Shift) & 0xff) & kIODisplayDitherDefault          ?           "422 Default," : "",
+					((value >> kIODisplayDitherYCbCr422Shift) & 0xff) & 0x70                             ?                 "422 ?," : "",
+					UNKNOWN_FLAG(value & 0xff000000)
+				); break;
+				
+			case kConnectionDisplayFlags:
+				scnprintf(buf, bufSize, "%s%s",
+					value == kIODisplayNeedsCEAUnderscan ? "NeedsCEAUnderscan," : "",
+						 UNKNOWN_FLAG(value & 0xfffffffe)
+				); break;
+
+			case kIOMirrorAttribute:
+				scnprintf(buf, bufSize, "%s%s%s%s",
+					value & kIOMirrorIsPrimary  ?  "kIOMirrorIsPrimary," : "",
+					value & kIOMirrorHWClipped  ?  "kIOMirrorHWClipped," : "",
+					value & kIOMirrorIsMirrored ? "kIOMirrorIsMirrored," : "",
+					UNKNOWN_FLAG(value & 0x1fffffff)
+				); break;
+
+			case kIOMirrorDefaultAttribute:
+				scnprintf(buf, bufSize, "%s%s%s%s%s%s%s",
+					value & kIOMirrorDefault        ?        "kIOMirrorDefault," : "",
+					value & kIOMirrorForced         ?         "kIOMirrorForced," : "",
+					value & kIOGPlatformYCbCr       ?       "kIOGPlatformYCbCr," : "",
+					value & kIOFBDesktopModeAllowed ? "kIOFBDesktopModeAllowed," : "",
+					value & kIOMirrorNoAutoHDMI     ?     "kIOMirrorNoAutoHDMI," : "",
+					value & kIOMirrorHint           ?           "kIOMirrorHint," : "",
+					UNKNOWN_FLAG(value & 0xfffeffe0)
+				); break;
+				
+			case kConnectionDisplayParameterCount:
+			case kTempAttribute:
+			case kIOFBSpeedAttribute:
+			case kIOPowerStateAttribute:
+			case kConnectionOverscan:
+			case kConnectionUnderscan:
+			case STRTOORD4(kIODisplaySelectedColorModeKey):
+				scnprintf(buf, bufSize, "%ld", (unsigned long)value);
+				break;
+
+			case 'dith':
+			case kIOHardwareCursorAttribute:
+			case kIOClamshellStateAttribute:
+			case kConnectionEnable:
+			case kConnectionCheckEnable:
+			case kIOVRAMSaveAttribute:
+			case kIOCapturedAttribute:
+			case kIOFBLimitHDCPAttribute:
+			case kIOFBLimitHDCPStateAttribute:
+			case kConnectionFlushParameters:
+				scnprintf(buf, bufSize, "%s", value == 1 ? "true" : value == 0 ? "false" : UNKNOWN_VALUE(value));
+				break;
+			
+			case kConnectionProbe:
+				scnprintf(buf, bufSize, "%s", value == kIOFBUserRequestProbe ? "kIOFBUserRequestProbe" : UNKNOWN_VALUE(value));
+				break;
+
+			case kConnectionIgnore:
+				scnprintf(buf, bufSize, "isMuted:%s%s%s", ((value & (1LL << 31)) == 1) ? "true" : "false", (value & ~(1LL << 31)) ? " " : "", (value & ~(1 << 31)) ? UNKNOWN_VALUE(value) : "");
+				break;
+			
+			case kConnectionChanged:
+			case kConnectionSupportsAppleSense:
+			case kConnectionSupportsHLDDCSense:
+			case kConnectionSupportsLLDDCSense:
+				scnprintf(buf, bufSize, "n/a");
+				break;
+
+			case kConnectionDisplayParameters:
+				for (int i = 0; i < len / sizeof(UInt32); i++) { // actually an array of UInt64 but we'll double check to make sure the high part is zero
+					UInt32 parameter = ((UInt32*)(valuePtr))[i];
+					if (parameter || (i & 1) == 0) {
+						const char *parameterName = GetAttributeName(parameter, forConnection);
+						inc = scnprintf(buf, bufSize, "%s'%s' %s", i ? ", " : "",
+							GetAttributeCodeStr(attributename, sizeof(attributename), parameter, "ø"),
+							parameterName ? parameterName : ""
+						);
+						buf += inc; bufSize -= inc;
+					}
+				}
+				
+				break;
+
+			default:
+				scnprintf(buf, bufSize, "0x%llx", value);
+		}
+	}
+
+	if (align)
+		cprintf("%-36s '%s' = %s", name ? name : "", GetAttributeCodeStr(attributename, sizeof(attributename), attribute, "ø"), valueStr);
+	else
+		cprintf("%s%s'%s' = %s", name ? name : "", name ? " " : "", GetAttributeCodeStr(attributename, sizeof(attributename), attribute, "ø"), valueStr);
+} // DumpOneAttribute
+
+
 void DumpOneIODisplayAttributes(CFMutableDictionaryRef dictDisplayInfo)
 {
 	typedef struct IODisplayAttributesRec {
-		union {
-			char c[4];
-			UInt32 v;
-		} attribute;
+		UInt32 attribute;
 		UInt32 value;
 	} IODisplayAttributesRec;
 
-	CFDataRef IODisplayAttributesData = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kIODisplayAttributesKey));
+	CFDataRef IODisplayAttributesData = (CFDataRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kIODisplayAttributesKey));
 	
 	if (IODisplayAttributesData && CFGetTypeID(IODisplayAttributesData) == CFDataGetTypeID()) {
-		iprintf("IODisplayAttributes = [\n"); INDENT
+		iprintf("IODisplayAttributes = {\n"); INDENT
 		
 		if (CFDataGetLength(IODisplayAttributesData) % sizeof(IODisplayAttributesRec) != 0) {
 			iprintf("DisplayPixelDimensions = unexpected size %ld\n", CFDataGetLength(IODisplayAttributesData));
@@ -2120,194 +2118,55 @@ void DumpOneIODisplayAttributes(CFMutableDictionaryRef dictDisplayInfo)
 		else {
 			IODisplayAttributesRec *p = (IODisplayAttributesRec *)CFDataGetBytePtr(IODisplayAttributesData);
 			for (int i = 0; i < CFDataGetLength(IODisplayAttributesData) / sizeof(IODisplayAttributesRec); i++) {
-				char buf[200];
-				
-				char* name;
-				switch (p[i].attribute.v) {
-					case kIOFBSpeedAttribute                 : name = "kIOFBSpeedAttribute                 "; break;
-					case kIOFBWSStartAttribute               : name = "kIOFBWSStartAttribute               "; break;
-					case kIOFBProcessConnectChangeAttribute  : name = "kIOFBProcessConnectChangeAttribute  "; break;
-					case kIOFBEndConnectChangeAttribute      : name = "kIOFBEndConnectChangeAttribute      "; break;
-					case kIOFBMatchedConnectChangeAttribute  : name = "kIOFBMatchedConnectChangeAttribute  "; break;
-					// Connection attributesk
-					case kConnectionInTVMode                 : name = "kConnectionInTVMode                 "; break;
-					case kConnectionWSSB                     : name = "kConnectionWSSB                     "; break;
-					case kConnectionRawBacklight             : name = "kConnectionRawBacklight             "; break;
-					case kConnectionBacklightSave            : name = "kConnectionBacklightSave            "; break;
-					case kConnectionVendorTag                : name = "kConnectionVendorTag                "; break;
-
-					case kConnectionFlags                    : name = "kConnectionFlags                    ";
-						
-					case kConnectionSyncEnable               : name = "kConnectionSyncEnable               "; break;
-					case kConnectionSyncFlags                : name = "kConnectionSyncFlags                "; break;
-					
-					case kConnectionSupportsAppleSense       : name = "kConnectionSupportsAppleSense       "; break;
-					case kConnectionSupportsLLDDCSense       : name = "kConnectionSupportsLLDDCSense       "; break;
-					case kConnectionSupportsHLDDCSense       : name = "kConnectionSupportsHLDDCSense       "; break;
-					case kConnectionEnable                   : name = "kConnectionEnable                   "; break;
-					case kConnectionCheckEnable              : name = "kConnectionCheckEnable              "; break;
-					case kConnectionProbe                    : name = "kConnectionProbe                    "; break;
-					case kConnectionIgnore                   : name = "kConnectionIgnore                   "; break;
-					case kConnectionChanged                  : name = "kConnectionChanged                  "; break;
-					case kConnectionPower                    : name = "kConnectionPower                    "; break;
-					case kConnectionPostWake                 : name = "kConnectionPostWake                 "; break;
-					case kConnectionDisplayParameterCount    : name = "kConnectionDisplayParameterCount    "; break;
-					case kConnectionDisplayParameters        : name = "kConnectionDisplayParameters        "; break;
-					case kConnectionOverscan                 : name = "kConnectionOverscan                 "; break;
-					case kConnectionVideoBest                : name = "kConnectionVideoBest                "; break;
-
-					case kConnectionRedGammaScale            : name = "kConnectionRedGammaScale            "; break;
-					case kConnectionGreenGammaScale          : name = "kConnectionGreenGammaScale          "; break;
-					case kConnectionBlueGammaScale           : name = "kConnectionBlueGammaScale           "; break;
-					case kConnectionGammaScale               : name = "kConnectionGammaScale               "; break;
-					case kConnectionFlushParameters          : name = "kConnectionFlushParameters          "; break;
-
-					case kConnectionVBLMultiplier            : name = "kConnectionVBLMultiplier            "; break;
-
-					case kConnectionHandleDisplayPortEvent   : name = "kConnectionHandleDisplayPortEvent   "; break;
-
-					case kConnectionPanelTimingDisable       : name = "kConnectionPanelTimingDisable       "; break;
-
-					case kConnectionColorMode                : name = "kConnectionColorMode                "; break;
-					case kConnectionColorModesSupported      : name = "kConnectionColorModesSupported      "; break;
-					case kConnectionColorDepthsSupported     : name = "kConnectionColorDepthsSupported     "; break;
-
-					case kConnectionControllerDepthsSupported: name = "kConnectionControllerDepthsSupported"; break;
-					case kConnectionControllerColorDepth     : name = "kConnectionControllerColorDepth     "; break;
-					case kConnectionControllerDitherControl  : name = "kConnectionControllerDitherControl  "; break;
-
-					case kConnectionDisplayFlags             : name = "kConnectionDisplayFlags             "; break;
-
-					case kConnectionEnableAudio              : name = "kConnectionEnableAudio              "; break;
-					case kConnectionAudioStreaming           : name = "kConnectionAudioStreaming           "; break;
-
-					case kConnectionStartOfFrameTime         : name = "kConnectionStartOfFrameTime         "; break;
-					default                                  : name = "?                                   "; break;
-				}
-
-				switch (p[i].attribute.v) {
-					case kConnectionFlags                    : name = "kConnectionFlags                    ";
-						snprintf(buf, sizeof(buf), "%s%s%s",
-							p[i].value & kIOConnectionBuiltIn    ?    "BuiltIn," : "",
-							p[i].value & kIOConnectionStereoSync ? "StereoSync," : "",
-							UNKNOWN_FLAG(p[i].value & 0xffff77ff)
-						); break;
-
-					case kConnectionSyncFlags:
-						snprintf(buf, sizeof(buf), "%s%s%s%s%s%s%s%s%s",
-							p[i].value & kIOHSyncDisable          ?          "HSyncDisable," : "",
-							p[i].value & kIOVSyncDisable          ?          "VSyncDisable," : "",
-							p[i].value & kIOCSyncDisable          ?          "CSyncDisable," : "",
-							p[i].value & kIONoSeparateSyncControl ? "NoSeparateSyncControl," : "",
-							p[i].value & kIOTriStateSyncs         ?         "TriStateSyncs," : "",
-							p[i].value & kIOSyncOnBlue            ?            "SyncOnBlue," : "",
-							p[i].value & kIOSyncOnGreen           ?           "SyncOnGreen," : "",
-							p[i].value & kIOSyncOnRed             ?             "SyncOnRed," : "",
-							UNKNOWN_FLAG(p[i].value & 0xffffff00)
-						); break;
-
-					case kConnectionHandleDisplayPortEvent:
-						snprintf(buf, sizeof(buf), "%s",
-							p[i].value == kIODPEventStart                       ?                       "Start" :
-							p[i].value == kIODPEventIdle                        ?                        "Idle" :
-							p[i].value == kIODPEventForceRetrain                ?                "ForceRetrain" :
-							p[i].value == kIODPEventRemoteControlCommandPending ? "RemoteControlCommandPending" :
-							p[i].value == kIODPEventAutomatedTestRequest        ?        "AutomatedTestRequest" :
-							p[i].value == kIODPEventContentProtection           ?           "ContentProtection" :
-							p[i].value == kIODPEventMCCS                        ?                        "MCCS" :
-							p[i].value == kIODPEventSinkSpecific                ?                "SinkSpecific" :
-							p[i].value == kIODPEventStart                       ?                       "Start" :
-							UNKNOWN_VALUE(p[i].value)
-						); break;
-
-					case kConnectionColorMode:
-					case kConnectionColorModesSupported:
-						snprintf(buf, sizeof(buf), "%s%s%s%s%s%s%s",
-							p[i].value == kIODisplayColorModeReserved  ?    "Reserved" : "",
-							p[i].value & kIODisplayColorModeRGB        ?        "RGB," : "",
-							p[i].value & kIODisplayColorModeYCbCr422   ?        "422," : "",
-							p[i].value & kIODisplayColorModeYCbCr444   ?        "444," : "",
-							p[i].value & kIODisplayColorModeRGBLimited ? "RGBLimited," : "",
-							p[i].value & kIODisplayColorModeAuto       ?       "Auto," : "",
-							UNKNOWN_FLAG(p[i].value & 0xefffeeee)
-						); break;
-
-					case kConnectionColorDepthsSupported:
-					case kConnectionControllerDepthsSupported:
-					case kConnectionControllerColorDepth:
-						snprintf(buf, sizeof(buf), "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
-							p[i].value == kIODisplayRGBColorComponentBitsUnknown ? "Unknown" : "",
-							p[i].value & kIODisplayRGBColorComponentBits6        ?  "RGB 6," : "",
-							p[i].value & kIODisplayRGBColorComponentBits8        ?  "RGB 8," : "",
-							p[i].value & kIODisplayRGBColorComponentBits10       ? "RGB 10," : "",
-							p[i].value & kIODisplayRGBColorComponentBits12       ? "RGB 12," : "",
-							p[i].value & kIODisplayRGBColorComponentBits14       ? "RGB 14," : "",
-							p[i].value & kIODisplayRGBColorComponentBits16       ? "RGB 16," : "",
-							p[i].value & kIODisplayYCbCr444ColorComponentBits6   ?  "444 6," : "",
-							p[i].value & kIODisplayYCbCr444ColorComponentBits8   ?  "444 8," : "",
-							p[i].value & kIODisplayYCbCr444ColorComponentBits10  ? "444 10," : "",
-							p[i].value & kIODisplayYCbCr444ColorComponentBits12  ? "444 12," : "",
-							p[i].value & kIODisplayYCbCr444ColorComponentBits14  ? "444 14," : "",
-							p[i].value & kIODisplayYCbCr444ColorComponentBits16  ? "444 16," : "",
-							p[i].value & kIODisplayYCbCr422ColorComponentBits6   ?  "422 6," : "",
-							p[i].value & kIODisplayYCbCr422ColorComponentBits8   ?  "422 8," : "",
-							p[i].value & kIODisplayYCbCr422ColorComponentBits10  ? "422 10," : "",
-							p[i].value & kIODisplayYCbCr422ColorComponentBits12  ? "422 12," : "",
-							p[i].value & kIODisplayYCbCr422ColorComponentBits14  ? "422 14," : "",
-							p[i].value & kIODisplayYCbCr422ColorComponentBits16  ? "422 16," : "",
-							UNKNOWN_FLAG(p[i].value & 0xffc00000)
-						); break;
-
-					case kConnectionControllerDitherControl:
-						snprintf(buf, sizeof(buf), "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
-							((p[i].value >> kIODisplayDitherRGBShift     ) & 0xff) == kIODisplayDitherDisable         ?           "RGB Disabled" : "",
-							((p[i].value >> kIODisplayDitherRGBShift     ) & 0xff) == kIODisplayDitherAll             ?                "RGB All" : "",
-							((p[i].value >> kIODisplayDitherRGBShift     ) & 0xff) & kIODisplayDitherSpatial          ?           "RGB Spatial," : "",
-							((p[i].value >> kIODisplayDitherRGBShift     ) & 0xff) & kIODisplayDitherTemporal         ?          "RGB Temporal," : "",
-							((p[i].value >> kIODisplayDitherRGBShift     ) & 0xff) & kIODisplayDitherFrameRateControl ?  "RGB FrameRateControl," : "",
-							((p[i].value >> kIODisplayDitherRGBShift     ) & 0xff) & kIODisplayDitherDefault          ?           "RGB Default," : "",
-							((p[i].value >> kIODisplayDitherRGBShift     ) & 0xff) & 0x70                             ?                 "RGB ?," : "",
-							((p[i].value >> kIODisplayDitherYCbCr444Shift) & 0xff) == kIODisplayDitherDisable         ?           "444 Disabled" : "",
-							((p[i].value >> kIODisplayDitherYCbCr444Shift) & 0xff) == kIODisplayDitherAll             ?                "444 All" : "",
-							((p[i].value >> kIODisplayDitherYCbCr444Shift) & 0xff) & kIODisplayDitherSpatial          ?           "444 Spatial," : "",
-							((p[i].value >> kIODisplayDitherYCbCr444Shift) & 0xff) & kIODisplayDitherTemporal         ?          "444 Temporal," : "",
-							((p[i].value >> kIODisplayDitherYCbCr444Shift) & 0xff) & kIODisplayDitherFrameRateControl ?  "444 FrameRateControl," : "",
-							((p[i].value >> kIODisplayDitherYCbCr444Shift) & 0xff) & kIODisplayDitherDefault          ?           "444 Default," : "",
-							((p[i].value >> kIODisplayDitherYCbCr444Shift) & 0xff) & 0x70                             ?                 "444 ?," : "",
-							((p[i].value >> kIODisplayDitherYCbCr422Shift) & 0xff) == kIODisplayDitherDisable         ?           "422 Disabled" : "",
-							((p[i].value >> kIODisplayDitherYCbCr422Shift) & 0xff) == kIODisplayDitherAll             ?                "422 All" : "",
-							((p[i].value >> kIODisplayDitherYCbCr422Shift) & 0xff) & kIODisplayDitherSpatial          ?           "422 Spatial," : "",
-							((p[i].value >> kIODisplayDitherYCbCr422Shift) & 0xff) & kIODisplayDitherTemporal         ?          "422 Temporal," : "",
-							((p[i].value >> kIODisplayDitherYCbCr422Shift) & 0xff) & kIODisplayDitherFrameRateControl ?  "422 FrameRateControl," : "",
-							((p[i].value >> kIODisplayDitherYCbCr422Shift) & 0xff) & kIODisplayDitherDefault          ?           "422 Default," : "",
-							((p[i].value >> kIODisplayDitherYCbCr422Shift) & 0xff) & 0x70                             ?                 "422 ?," : "",
-							UNKNOWN_FLAG(p[i].value & 0xff000000)
-						); break;
-						
-					case kConnectionDisplayFlags:
-						snprintf(buf, sizeof(buf), "%s%s",
-							p[i].value == kIODisplayNeedsCEAUnderscan ? "NeedsCEAUnderscan," : "",
-								 UNKNOWN_FLAG(p[i].value & 0xfffffffe)
-						); break;
-
-					default:
-						snprintf(buf, sizeof(buf), "");
-				}
-				
-				char attributename[20]; attributename[0] = '\0';
-				int x = 0;
-				if (p[i].attribute.c[3]) x += snprintf(attributename + x, sizeof(attributename) - x, "%c", p[i].attribute.c[3]); else x += snprintf(attributename + x, sizeof(attributename) - x, "ø");
-				if (p[i].attribute.c[2]) x += snprintf(attributename + x, sizeof(attributename) - x, "%c", p[i].attribute.c[2]); else x += snprintf(attributename + x, sizeof(attributename) - x, "ø");
-				if (p[i].attribute.c[1]) x += snprintf(attributename + x, sizeof(attributename) - x, "%c", p[i].attribute.c[1]); else x += snprintf(attributename + x, sizeof(attributename) - x, "ø");
-				if (p[i].attribute.c[0]) x += snprintf(attributename + x, sizeof(attributename) - x, "%c", p[i].attribute.c[0]); else x += snprintf(attributename + x, sizeof(attributename) - x, "ø");
-				iprintf("[%d] = { %s %s = 0x%08x : %s },\n", i, name, attributename, p[i].value, buf);
+				iprintf("[%d] = { ", i);
+				DumpOneAttribute(p[i].attribute, false, false, &p[i].value, sizeof(p[i].value));
+				cprintf(" },\n");
 			}
 			CFDictionaryRemoveValue(dictDisplayInfo, CFSTR(kIODisplayAttributesKey));
 		}
-		OUTDENT iprintf("]; // IODisplayAttributes\n");
+		OUTDENT iprintf("}; // IODisplayAttributes\n");
 	} // if IODisplayAttributes
 
 } // DumpOneIODisplayAttributes
+
+
+
+static void DumpOneIOFBAttribute(CFDataRef data, int index)
+{
+	typedef struct Attribute {
+		bool      set;
+		bool      notnull;
+		IOIndex   connectIndex;
+		IOSelect  attribute;
+		IOReturn  result;
+		UInt64    value;
+	} Attribute;
+
+	if (!data) {
+		iprintf("NULL\n");
+		return;
+	}
+	
+	CFIndex len = CFDataGetLength(data);
+	Attribute* atr = (Attribute*) CFDataGetBytePtr(data);
+
+	if (!atr) {
+		iprintf("NULL2\n");
+		return;
+	}
+	iprintf("%sAttribute", atr->set ? "set" : "get");
+	if (atr->connectIndex >= 0) {
+		cprintf("ForConnection(%d) ", atr->connectIndex);
+	}
+	else {
+		cprintf("                 ");
+	}
+	
+	char resultStr[40];
+	cprintf("{ ");
+	DumpOneAttribute(atr->attribute, atr->set, atr->connectIndex >= 0, atr->notnull ? &atr->value : NULL, len - offsetof(Attribute, value) );
+	cprintf (" }%s\n", DumpOneReturn(resultStr, sizeof(resultStr), atr->result));
+} // DumpOneIOFBAttribute
 
 
 
@@ -2317,7 +2176,7 @@ void DumpDisplayInfo(CFMutableDictionaryRef dictDisplayInfo)
 	CFNumberRef num;
 
 	{ // DisplayVendorID
-		num = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayVendorID));
+		num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayVendorID));
 		if (num) {
 			CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 			iprintf("DisplayVendorID = %d (0x%04x) %s\"%c%c%c\";\n", (int)numValue, (int)numValue,
@@ -2330,8 +2189,8 @@ void DumpDisplayInfo(CFMutableDictionaryRef dictDisplayInfo)
 		}	} // DisplayVendorID
 	
 	{ // DisplayProductID
-		num = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayVendorID));
-		num = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayProductID));
+		num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayVendorID));
+		num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayProductID));
 		if (num) {
 			CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 			iprintf("DisplayProductID = %d (0x%04x);\n", (int)numValue, (int)numValue);
@@ -2343,7 +2202,7 @@ void DumpDisplayInfo(CFMutableDictionaryRef dictDisplayInfo)
 
 		// Show the preferred DisplayProductName
 		{
-			CFDictionaryRef names = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayProductName));
+			CFDictionaryRef names = (CFDictionaryRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayProductName));
 			if (names) {
 				CFArrayRef langKeys = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
 				CFDictionaryApplyFunction(names, KeyArrayCallback, (void *) langKeys);
@@ -2354,8 +2213,8 @@ void DumpDisplayInfo(CFMutableDictionaryRef dictDisplayInfo)
 					CFStringRef     langKey;
 					CFStringRef     localName;
 
-					langKey = CFArrayGetValueAtIndex(orderLangKeys, 0);
-					localName = CFDictionaryGetValue(names, langKey);
+					langKey = (CFStringRef)CFArrayGetValueAtIndex(orderLangKeys, 0);
+					localName = (CFStringRef)CFDictionaryGetValue(names, langKey);
 					CFStringGetCString(localName, cName, sizeof(cName),
 										CFStringGetSystemEncoding());
 					iprintf("DisplayProductName (preferred) = \"%s\"\n", cName);
@@ -2367,14 +2226,14 @@ void DumpDisplayInfo(CFMutableDictionaryRef dictDisplayInfo)
 		// Show all languages used for each DisplayProductName
 		{
 			CFMutableDictionaryRef DisplayProductName = NULL;
-			CFDictionaryRef DisplayProductName0 = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayProductName));
+			CFDictionaryRef DisplayProductName0 = (CFDictionaryRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayProductName));
 			if (DisplayProductName0) {
 				DisplayProductName = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, DisplayProductName0);
 
 				CFIndex itemCount = CFDictionaryGetCount(DisplayProductName);
 
-				const void **keys   = malloc(itemCount * sizeof(void*));
-				const void **values = malloc(itemCount * sizeof(void*));
+				const void **keys   = (const void **)malloc(itemCount * sizeof(void*));
+				const void **values = (const void **)malloc(itemCount * sizeof(void*));
 				CFDictionaryGetKeysAndValues(DisplayProductName, keys, values);
 				
 				iprintf("DisplayProductName = { ");
@@ -2390,8 +2249,8 @@ void DumpDisplayInfo(CFMutableDictionaryRef dictDisplayInfo)
 					langCount = 0;
 					for (CFIndex i = nextname; i < itemCount; i++) {
 						if (
-							CFStringGetCString(values[i], name, sizeof(name), kCFStringEncodingUTF8) &&
-							CFStringGetCString(keys  [i], key , sizeof(key ), kCFStringEncodingUTF8))
+							CFStringGetCString((CFStringRef)values[i], name, sizeof(name), kCFStringEncodingUTF8) &&
+							CFStringGetCString((CFStringRef)keys  [i], key , sizeof(key ), kCFStringEncodingUTF8))
 						{
 							if (i == nextname) {
 								nameCount++;
@@ -2436,7 +2295,7 @@ void DumpDisplayInfo(CFMutableDictionaryRef dictDisplayInfo)
 	} // DisplayProductName
 
 	{ // IODisplayConnectFlags
-		CFDataRef IODisplayConnectFlagsData = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kIODisplayConnectFlagsKey));
+		CFDataRef IODisplayConnectFlagsData = (CFDataRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kIODisplayConnectFlagsKey));
 		typedef struct IODisplayConnectFlagsRec {
 			UInt32 flags;
 		} IODisplayConnectFlagsRec;
@@ -2472,7 +2331,7 @@ void DumpDisplayInfo(CFMutableDictionaryRef dictDisplayInfo)
 	} // IODisplayConnectFlags
 
 	{ // IODisplayAttributes
-		CFDictionaryRef IODisplayAttributesDict0 = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kIODisplayAttributesKey));
+		CFDictionaryRef IODisplayAttributesDict0 = (CFDictionaryRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kIODisplayAttributesKey));
 		
 		if (IODisplayAttributesDict0 && CFGetTypeID(IODisplayAttributesDict0) == CFDictionaryGetTypeID()) {
 			CFMutableDictionaryRef IODisplayAttributesDict = NULL;
@@ -2492,7 +2351,7 @@ void DumpDisplayInfo(CFMutableDictionaryRef dictDisplayInfo)
 	} // IODisplayAttributes
 
 	{ // IODisplayParameters
-		CFDictionaryRef dictDisplayParameters0 = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kIODisplayParametersKey));
+		CFDictionaryRef dictDisplayParameters0 = (CFDictionaryRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kIODisplayParametersKey));
 		if (dictDisplayParameters0 && CFGetTypeID(dictDisplayParameters0) == CFDictionaryGetTypeID()) {
 			CFMutableDictionaryRef dictDisplayParameters = DumpDisplayParameters("IODisplayParameters", dictDisplayParameters0);
 			if (dictDisplayParameters) {
@@ -2502,7 +2361,7 @@ void DumpDisplayInfo(CFMutableDictionaryRef dictDisplayInfo)
 	} // IODisplayParameters
 
 	{ // IODisplayEDID
-		CFDataRef IODisplayEDIDData = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kIODisplayEDIDKey));
+		CFDataRef IODisplayEDIDData = (CFDataRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kIODisplayEDIDKey));
 		if (IODisplayEDIDData) {
 			if (CFDataGetLength(IODisplayEDIDData)) {
 				iprintf("IODisplayEDID%s = ", CFDictionaryGetCountOfKey(dictDisplayInfo, CFSTR(kIODisplayEDIDOriginalKey)) ? "        " : "");
@@ -2517,7 +2376,7 @@ void DumpDisplayInfo(CFMutableDictionaryRef dictDisplayInfo)
 	} // IODisplayEDID
 
 	{ // IODisplayEDIDOriginal
-		CFDataRef IODisplayEDIDOriginalData = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kIODisplayEDIDOriginalKey));
+		CFDataRef IODisplayEDIDOriginalData = (CFDataRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kIODisplayEDIDOriginalKey));
 		if (IODisplayEDIDOriginalData) {
 			if (CFDataGetLength(IODisplayEDIDOriginalData)) {
 				iprintf("IODisplayEDIDOriginal = ");
@@ -2547,7 +2406,7 @@ void DumpDisplayInfo(CFMutableDictionaryRef dictDisplayInfo)
 void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 {
 	CFNumberRef         num;
-	CGError             err;
+	kern_return_t       kerr;
 	SInt32              numValue;
 
 	CFDictionaryRef dictDisplayInfo0 = IODisplayCreateInfoDictionary(ioFramebufferService, kNilOptions);
@@ -2560,8 +2419,8 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 		DumpDisplayInfo(dictDisplayInfo);
 
 		{ // DisplayHorizontalImageSize && DisplayVerticalImageSize
-			CFNumberRef h = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayHorizontalImageSize));
-			CFNumberRef v = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayVerticalImageSize));
+			CFNumberRef h = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayHorizontalImageSize));
+			CFNumberRef v = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayVerticalImageSize));
 			if (h || v) {
 				SInt32 hval = -1;
 				SInt32 vval = -1;
@@ -2574,7 +2433,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 		} // DisplayHorizontalImageSize
 
 		{ // DisplaySubPixelLayout
-			num = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplaySubPixelLayout));
+			num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplaySubPixelLayout));
 			if (num) {
 				CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 				iprintf("DisplaySubPixelLayout = %s;\n",
@@ -2590,7 +2449,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 		} // DisplaySubPixelLayout
 		
 		{ // DisplaySubPixelConfiguration
-			num = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplaySubPixelConfiguration));
+			num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplaySubPixelConfiguration));
 			if (num) {
 				CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 				iprintf("DisplaySubPixelConfiguration = %s;\n",
@@ -2606,7 +2465,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 		} // DisplaySubPixelConfiguration
 		
 		{ // DisplaySubPixelShape
-			num = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplaySubPixelShape));
+			num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplaySubPixelShape));
 			if (num) {
 				CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 				iprintf("DisplaySubPixelShape = %s;\n",
@@ -2623,7 +2482,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 		} // DisplaySubPixelShape
 		
 		{ // DisplayPixelDimensions
-			CFDataRef displayPixelDimensionsData = CFDictionaryGetValue(dictDisplayInfo, CFSTR("DisplayPixelDimensions"));
+			CFDataRef displayPixelDimensionsData = (CFDataRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR("DisplayPixelDimensions"));
 			typedef struct DisplayPixelDimensionsRec {
 				UInt32 width;
 				UInt32 height;
@@ -2642,7 +2501,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 		} // DisplayPixelDimensions
 
 		{ // IOFBTransform
-			num = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kIOFBTransformKey));
+			num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kIOFBTransformKey));
 			if (num) {
 				CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 				iprintf("IOFBTransform = ");
@@ -2653,7 +2512,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 		} // IOFBTransform
 		
 		{ // graphic-options
-			num = CFDictionaryGetValue(dictDisplayInfo, CFSTR("graphic-options"));
+			num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR("graphic-options"));
 			if (num) {
 				CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 				iprintf("graphic-options = %s%s%s%s%s%s%s;\n",
@@ -2672,7 +2531,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 		{ // Display RGBWhite Point
 			#define POINT1(C,X) \
 				float val_ ## C ## Point ## X = 0.0; \
-				CFNumberRef num_ ## C ## Point ## X = CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplay ## C ## Point ## X)); \
+				CFNumberRef num_ ## C ## Point ## X = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplay ## C ## Point ## X)); \
 				char str_ ## C ## Point ## X[20] = {}; \
 				if (num_ ## C ## Point ## X) { \
 					CFNumberGetValue(num_ ## C ## Point ## X, kCFNumberFloatType, &val_ ## C ## Point ## X); \
@@ -2699,14 +2558,60 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 		OUTDENT iprintf("}; // DisplayInfo\n\n");
 		CFRelease(dictDisplayInfo);
 	} // DisplayInfo
-	
+
+	io_service_t ioDisplayService = IODisplayForFramebuffer( ioFramebufferService, kNilOptions );
+
 	CFDictionaryRef dictDisplayParameters = NULL;
 	if (KERN_SUCCESS == IODisplayCopyParameters(ioFramebufferService, kNilOptions, &dictDisplayParameters)) {
 		// same as IODisplay/IODisplayParameters
-		DumpDisplayParameters("IODisplayCopyParameters", dictDisplayParameters);
+		DumpDisplayParameters("IODisplayCopyParameters for IOFramebuffer", dictDisplayParameters);
 		cprintf("\n");
 		CFRelease(dictDisplayParameters);
 	}
+	if (KERN_SUCCESS == IODisplayCopyParameters(ioDisplayService, -1, &dictDisplayParameters)) {
+		// same as IODisplay/IODisplayParameters
+		DumpDisplayParameters("IODisplayCopyParameters for IODisplay", dictDisplayParameters);
+		cprintf("\n");
+		CFRelease(dictDisplayParameters);
+	}
+	
+	CFDictionaryRef dictDisplayFloatParameters = NULL;
+	if (KERN_SUCCESS == IODisplayCopyFloatParameters(ioFramebufferService, -1, &dictDisplayFloatParameters)) {
+		// same as IODisplay/IODisplayParameters
+		DumpDisplayFloatParameters("IODisplayCopyFloatParameters for IOFramebuffer", dictDisplayFloatParameters);
+		cprintf("\n");
+		CFRelease(dictDisplayFloatParameters);
+	}
+	if (KERN_SUCCESS == IODisplayCopyFloatParameters(ioDisplayService, -1, &dictDisplayFloatParameters)) {
+		// same as IODisplay/IODisplayParameters
+		DumpDisplayFloatParameters("IODisplayCopyFloatParameters for IODisplay", dictDisplayFloatParameters);
+		cprintf("\n");
+		CFRelease(dictDisplayFloatParameters);
+	}
+
+	DumpAllParameters("IODisplayGet*Parameter for IOFramebuffer", ioFramebufferService);
+	cprintf("\n");
+
+	DumpAllParameters("IODisplayGet*Parameter for IODisplay", ioDisplayService);
+	cprintf("\n");
+
+#if 0
+√	IODisplayForFramebuffer
+
+√	IODisplayCopyParameters
+√	IODisplayCopyFloatParameters
+
+√	IODisplayGetFloatParameter
+√	IODisplayGetIntegerRangeParameter
+
+	IODisplaySetFloatParameter
+	IODisplaySetIntegerParameter
+
+	IODisplaySetParameters
+	IODisplayCommitParameters
+
+#endif
+
 
 	iprintf("IOFramebuffer 0x%0x = {\n", ioFramebufferService); INDENT
 	{
@@ -2716,32 +2621,32 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 				
 				{ // IOFBConfig
 					CFMutableDictionaryRef IOFBConfig = NULL;
-					CFDictionaryRef IOFBConfig0 = CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBConfigKey));
+					CFDictionaryRef IOFBConfig0 = (CFDictionaryRef)CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBConfigKey));
 					if (IOFBConfig0) IOFBConfig = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, IOFBConfig0);
 					if (IOFBConfig) {
 						iprintf("IOFBConfig = {\n"); INDENT
 						
 						{ // IOFBModes
 							CFMutableArrayRef IOFBModes = NULL;
-							CFArrayRef IOFBModes0 = CFDictionaryGetValue(IOFBConfig, CFSTR(kIOFBModesKey));
+							CFArrayRef IOFBModes0 = (CFArrayRef)CFDictionaryGetValue(IOFBConfig, CFSTR(kIOFBModesKey));
 							if (IOFBModes0) IOFBModes = CFArrayCreateMutableCopy(kCFAllocatorDefault, 0, IOFBModes0);
 							if (IOFBModes && CFArrayGetCount(IOFBModes)) {
-								iprintf("IOFBModes = [\n"); INDENT
+								iprintf("IOFBModes = {\n"); INDENT
 								detailedTimingsCount = CFArrayGetCount(IOFBModes);
-								detailedTimingsArr = malloc(detailedTimingsCount * sizeof(*detailedTimingsArr));
+								detailedTimingsArr = (IODetailedTimingInformationV2 *)malloc(detailedTimingsCount * sizeof(*detailedTimingsArr));
 								if (detailedTimingsArr) { bzero(detailedTimingsArr, detailedTimingsCount * sizeof(*detailedTimingsArr)); }
 								for (int i = 0, j = 0; i < detailedTimingsCount; i++) {
 									CFMutableDictionaryRef IOFBMode = NULL;
-									CFDictionaryRef IOFBMode0 = CFArrayGetValueAtIndex(IOFBModes, j);
+									CFDictionaryRef IOFBMode0 = (CFDictionaryRef)CFArrayGetValueAtIndex(IOFBModes, j);
 									if (IOFBMode0) IOFBMode = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, IOFBMode0);
 									iprintf("{");
 									if (IOFBMode) {
 										CFTypeRef val;
-										{ val = CFDictionaryGetValue(IOFBMode, CFSTR(kIOFBModeTMKey));  if (val) { cprintf(" DetailedTimingInformation = { "); DumpOneDetailedTimingInformation(val, -1, modeAlias); cprintf("};");
-											memcpy(&detailedTimingsArr[i], CFDataGetBytePtr(val), min(sizeof(*detailedTimingsArr), CFDataGetLength(val))); CFDictionaryRemoveValue(IOFBMode, CFSTR(kIOFBModeTMKey)); } }
-										{ val = CFDictionaryGetValue(IOFBMode, CFSTR(kIOFBModeDMKey));  if (val) { cprintf(   " DisplayModeInformation = { "); DumpOneDisplayModeInformation   (val); cprintf(" };"); CFDictionaryRemoveValue(IOFBMode, CFSTR(kIOFBModeDMKey)); } }
-										{ val = CFDictionaryGetValue(IOFBMode, CFSTR(kIOFBModeAIDKey)); if (val) { cprintf(              " AppleTimingID = "); DumpOneAppleID                  (val); cprintf(";");   CFDictionaryRemoveValue(IOFBMode, CFSTR(kIOFBModeAIDKey)); } }
-										{ val = CFDictionaryGetValue(IOFBMode, CFSTR(kIOFBModeIDKey));  if (val) { cprintf(                         " ID = "); DumpOneID            (val, modeAlias); cprintf(";"); if (CFDictionaryGetCount(IOFBMode) == 1) { CFDictionaryRemoveValue(IOFBMode, CFSTR(kIOFBModeIDKey)); } } }
+										{ val = CFDictionaryGetValue(IOFBMode, CFSTR(kIOFBModeTMKey));  if (val) { cprintf(" DetailedTimingInformation = { "); DumpOneDetailedTimingInformation((CFDataRef)val, -1, modeAlias); cprintf(" };");
+											memcpy(&detailedTimingsArr[i], CFDataGetBytePtr((CFDataRef)val), min(sizeof(*detailedTimingsArr), CFDataGetLength((CFDataRef)val))); CFDictionaryRemoveValue(IOFBMode, CFSTR(kIOFBModeTMKey)); } }
+										{ val = CFDictionaryGetValue(IOFBMode, CFSTR(kIOFBModeDMKey));  if (val) { cprintf(   " DisplayModeInformation = { "); DumpOneDisplayModeInformation   ((CFDataRef)val); cprintf(" };"); CFDictionaryRemoveValue(IOFBMode, CFSTR(kIOFBModeDMKey)); } }
+										{ val = CFDictionaryGetValue(IOFBMode, CFSTR(kIOFBModeAIDKey)); if (val) { cprintf(              " AppleTimingID = "); DumpOneAppleID                  ((CFNumberRef)val); cprintf(";");   CFDictionaryRemoveValue(IOFBMode, CFSTR(kIOFBModeAIDKey)); } }
+										{ val = CFDictionaryGetValue(IOFBMode, CFSTR(kIOFBModeIDKey));  if (val) { cprintf(                         " ID = "); DumpOneID            ((CFNumberRef)val, modeAlias); cprintf(";"); if (CFDictionaryGetCount(IOFBMode) == 1) { CFDictionaryRemoveValue(IOFBMode, CFSTR(kIOFBModeIDKey)); } } }
 	//									{ val = CFDictionaryGetValue(IOFBMode, CFSTR(kIOFBModeDFKey));  if (val) { dumpproc((void*)val); } }
 	//									{ val = CFDictionaryGetValue(IOFBMode, CFSTR(kIOFBModePIKey));  if (val) { dumpproc((void*)val); } }
 	//									{ val = CFDictionaryGetValue(IOFBMode, CFSTR(kIOFBModeIDKey));  if (val) { dumpproc((void*)val); } }
@@ -2755,7 +2660,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 									}
 									cprintf(" },\n");
 								} // for
-								OUTDENT iprintf("]; // IOFBModes\n");
+								OUTDENT iprintf("}; // IOFBModes\n");
 								if (CFArrayGetCount(IOFBModes)) {
 									CFDictionarySetValue(IOFBConfig, CFSTR(kIOFBModesKey), IOFBModes);
 								}
@@ -2768,14 +2673,14 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 						
 						{ // IOFBDetailedTimings
 							CFMutableArrayRef IOFBDetailedTimings = NULL;
-							CFArrayRef IOFBDetailedTimings0 = CFDictionaryGetValue(IOFBConfig, CFSTR(kIOFBDetailedTimingsKey));
+							CFArrayRef IOFBDetailedTimings0 = (CFArrayRef)CFDictionaryGetValue(IOFBConfig, CFSTR(kIOFBDetailedTimingsKey));
 							if (IOFBDetailedTimings0) IOFBDetailedTimings = CFArrayCreateMutableCopy(kCFAllocatorDefault, 0, IOFBDetailedTimings0);
 							if (IOFBDetailedTimings && CFArrayGetCount(IOFBDetailedTimings)) {
-								iprintf("IOFBDetailedTimings = [\n"); INDENT
+								iprintf("IOFBDetailedTimings = {\n"); INDENT
 								int dups = 0;
 								CFIndex count = CFArrayGetCount(IOFBDetailedTimings);
 								for (int i = 0, j = 0; i < count; i++) {
-									CFDataRef IOFBDetailedTiming = CFArrayGetValueAtIndex(IOFBDetailedTimings, j);
+									CFDataRef IOFBDetailedTiming = (CFDataRef)CFArrayGetValueAtIndex(IOFBDetailedTimings, j);
 									if (IOFBDetailedTiming) {
 										dups += DumpOneDetailedTimingInformation(IOFBDetailedTiming, i, modeAlias) ? 1 : 0;
 									}
@@ -2784,7 +2689,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 								if (dups) {
 									iprintf("%d duplicates\n", dups);
 								}
-								OUTDENT iprintf("]; // IOFBDetailedTimings\n");
+								OUTDENT iprintf("}; // IOFBDetailedTimings\n");
 								if (CFArrayGetCount(IOFBDetailedTimings)) {
 									CFDictionarySetValue(IOFBConfig, CFSTR(kIOFBDetailedTimingsKey), IOFBDetailedTimings);
 								}
@@ -2795,7 +2700,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 						} // IOFBDetailedTimings
 
 						{ // IOFB0Hz (suppressRefresh)
-							num = CFDictionaryGetValue(IOFBConfig, CFSTR("IOFB0Hz"));
+							num = (CFNumberRef)CFDictionaryGetValue(IOFBConfig, CFSTR("IOFB0Hz"));
 							if (num) {
 								CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 								iprintf("IOFB0Hz (suppressRefresh) = %s;\n", numValue == 1 ? "true" : numValue == 0 ? "false" : UNKNOWN_VALUE(numValue));
@@ -2804,7 +2709,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 						} // IOFB0Hz (suppressRefresh)
 
 						{ // IOFBmHz (detailedRefresh)
-							num = CFDictionaryGetValue(IOFBConfig, CFSTR("IOFBmHz"));
+							num = (CFNumberRef)CFDictionaryGetValue(IOFBConfig, CFSTR("IOFBmHz"));
 							if (num) {
 								CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 								iprintf("IOFBmHz (detailedRefresh) = %s;\n", numValue == 1 ? "true" : numValue == 0 ? "false" : UNKNOWN_VALUE(numValue));
@@ -2813,7 +2718,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 						} // IOFBmHz (detailedRefresh)
 
 						{ // IOFBmir (displayMirror)
-							num = CFDictionaryGetValue(IOFBConfig, CFSTR("IOFBmir"));
+							num = (CFNumberRef)CFDictionaryGetValue(IOFBConfig, CFSTR("IOFBmir"));
 							if (num) {
 								CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 								iprintf("IOFBmir (displayMirror) = %s\n", numValue == 1 ? "true" : numValue == 0 ? "false" : UNKNOWN_VALUE(numValue));
@@ -2822,25 +2727,25 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 						} // IOFBmir (displayMirror)
 
 						{ // IOFBScalerUnderscan (useScalerUnderscan)
-							num = CFDictionaryGetValue(IOFBConfig, CFSTR("IOFBmir"));
+							num = (CFNumberRef)CFDictionaryGetValue(IOFBConfig, CFSTR("IOFBScalerUnderscan"));
 							if (num) {
 								CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 								iprintf("IOFBScalerUnderscan (useScalerUnderscan) = %s;\n", numValue == 1 ? "true" : numValue == 0 ? "false" : UNKNOWN_VALUE(numValue));
-								CFDictionaryRemoveValue(IOFBConfig, CFSTR("IOFBmir"));
+								CFDictionaryRemoveValue(IOFBConfig, CFSTR("IOFBScalerUnderscan"));
 							}
 						} // IOFBScalerUnderscan (useScalerUnderscan)
 
 						{ // IOFBtv (addTVFlag)
-							num = CFDictionaryGetValue(IOFBConfig, CFSTR("IOFBmir"));
+							num = (CFNumberRef)CFDictionaryGetValue(IOFBConfig, CFSTR("IOFBtv"));
 							if (num) {
 								CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 								iprintf("IOFBtv (addTVFlag) = %s;\n", numValue == 1 ? "true" : numValue == 0 ? "false" : UNKNOWN_VALUE(numValue));
-								CFDictionaryRemoveValue(IOFBConfig, CFSTR("IOFBmir"));
+								CFDictionaryRemoveValue(IOFBConfig, CFSTR("IOFBtv"));
 							}
 						} // IOFBtv (addTVFlag)
 
 						{ // dims (IOFBOvrDimensions)
-							CFDataRef IOFBOvrDimensionsData = CFDictionaryGetValue(IOFBConfig, CFSTR("dims"));
+							CFDataRef IOFBOvrDimensionsData = (CFDataRef)CFDictionaryGetValue(IOFBConfig, CFSTR("dims"));
 							if (IOFBOvrDimensionsData) {
 								if (CFDataGetLength(IOFBOvrDimensionsData) != sizeof(IOFBOvrDimensions)) {
 									iprintf("dims (IOFBOvrDimensions) = unexpected size %ld\n", CFDataGetLength(IOFBOvrDimensionsData));
@@ -2859,7 +2764,16 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 							}
 						} // dims (IOFBOvrDimensions)
 
-
+                        
+                        { // DM (IODisplayModeInformation)
+                            CFDataRef IOFBModeDMData = (CFDataRef)CFDictionaryGetValue(IOFBConfig, CFSTR(kIOFBModeDMKey));
+                            if (IOFBModeDMData) {
+                                iprintf("DM (IODisplayModeInformation) = { ");
+                                DumpOneDisplayModeInformation(IOFBModeDMData);
+                                cprintf(" };\n");
+                                CFDictionaryRemoveValue(IOFBConfig, CFSTR(kIOFBModeDMKey));
+                            }
+                        } // dims (IOFBModeDM)
 
 						if (CFDictionaryGetCount(IOFBConfig)) {
 							CFDictionarySetValue(IOFBProperties, CFSTR(kIOFBConfigKey), IOFBConfig);
@@ -2873,15 +2787,15 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 				} // IOFBConfig
 
 				{ // IOFBCursorInfo
-					CFArrayRef IOFBCursorInfo = CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBCursorInfoKey));
+					CFArrayRef IOFBCursorInfo = (CFArrayRef)CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBCursorInfoKey));
 					if (IOFBCursorInfo) {
 						CFMutableDictionaryRef IOFBCursorInfoNew = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, NULL, NULL);
 						CFIndex itemCount = CFArrayGetCount(IOFBCursorInfo);
 						if (itemCount) {
-							iprintf("IOFBCursorInfo = [\n"); INDENT
+							iprintf("IOFBCursorInfo = {\n"); INDENT
 							for (SInt32 i = 0; i < itemCount; i++) {
 								bool good = false;
-								CFDataRef IOFBOneCursorInfo = CFArrayGetValueAtIndex(IOFBCursorInfo, i);
+								CFDataRef IOFBOneCursorInfo = (CFDataRef)CFArrayGetValueAtIndex(IOFBCursorInfo, i);
 								if (IOFBOneCursorInfo && CFGetTypeID(IOFBOneCursorInfo) == CFDataGetTypeID()) {
 									iprintf("[%d] = ", i);
 									good = DumpOneCursorInfo(IOFBOneCursorInfo, i);
@@ -2893,7 +2807,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 									CFDictionaryAddValue(IOFBCursorInfoNew, arrayIndex, IOFBOneCursorInfo);
 								}
 							}
-							OUTDENT iprintf("]; // IOFBCursorInfo\n");
+							OUTDENT iprintf("}; // IOFBCursorInfo\n");
 							
 							if (CFDictionaryGetCount(IOFBCursorInfoNew)) {
 								CFDictionarySetValue(IOFBProperties, CFSTR(kIOFBCursorInfoKey), IOFBCursorInfoNew);
@@ -2907,14 +2821,14 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 
 				{ // IOFBDetailedTimings
 					CFMutableArrayRef IOFBDetailedTimings = NULL;
-					CFArrayRef IOFBDetailedTimings0 = CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBDetailedTimingsKey));
+					CFArrayRef IOFBDetailedTimings0 = (CFArrayRef)CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBDetailedTimingsKey));
 					if (IOFBDetailedTimings0) IOFBDetailedTimings = CFArrayCreateMutableCopy(kCFAllocatorDefault, 0, IOFBDetailedTimings0);
 					if (IOFBDetailedTimings && CFArrayGetCount(IOFBDetailedTimings)) {
-						iprintf("IOFBDetailedTimings = [\n"); INDENT
+						iprintf("IOFBDetailedTimings = {\n"); INDENT
 						int dups = 0;
 						CFIndex count = CFArrayGetCount(IOFBDetailedTimings);
 						for (int i = 0, j = 0; i < count; i++) {
-							CFDataRef IOFBDetailedTiming = CFArrayGetValueAtIndex(IOFBDetailedTimings, j);
+							CFDataRef IOFBDetailedTiming = (CFDataRef)CFArrayGetValueAtIndex(IOFBDetailedTimings, j);
 							if (IOFBDetailedTiming) {
 								dups += DumpOneDetailedTimingInformation(IOFBDetailedTiming, i, modeAlias) ? 1 : 0;
 							}
@@ -2923,7 +2837,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 						if (dups) {
 							iprintf("%d duplicates\n", dups);
 						}
-						OUTDENT iprintf("]; // IOFBDetailedTimings\n");
+						OUTDENT iprintf("}; // IOFBDetailedTimings\n");
 						if (CFArrayGetCount(IOFBDetailedTimings)) {
 							CFDictionarySetValue(IOFBProperties, CFSTR(kIOFBDetailedTimingsKey), IOFBDetailedTimings);
 						}
@@ -2933,8 +2847,38 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 					}
 				} // IOFBDetailedTimings
 
+                DoAllEDIDs(IOFBProperties);
+
+				{ // IOFBAttributes
+					
+					// These are captured by a Lilu patch
+					#define kIOFBAttributesKey "IOFBAttributes"
+
+					CFMutableArrayRef IOFBAttributes = NULL;
+					CFArrayRef IOFBAttributes0 = (CFArrayRef)CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBAttributesKey));
+					if (IOFBAttributes0) IOFBAttributes = CFArrayCreateMutableCopy(kCFAllocatorDefault, 0, IOFBAttributes0);
+					if (IOFBAttributes && CFArrayGetCount(IOFBAttributes)) {
+						iprintf("IOFBAttributes = {\n"); INDENT
+						CFIndex count = CFArrayGetCount(IOFBAttributes);
+						for (int i = 0, j = 0; i < count; i++) {
+							CFDataRef IOFBAttribute = (CFDataRef)CFArrayGetValueAtIndex(IOFBAttributes, j);
+							if (IOFBAttribute) {
+								DumpOneIOFBAttribute(IOFBAttribute, i);
+							}
+							CFArrayRemoveValueAtIndex(IOFBAttributes, j);
+						}
+						OUTDENT iprintf("}; // IOFBAttributes\n");
+						if (CFArrayGetCount(IOFBAttributes)) {
+							CFDictionarySetValue(IOFBProperties, CFSTR(kIOFBAttributesKey), IOFBAttributes);
+						}
+						else {
+							CFDictionaryRemoveValue(IOFBProperties, CFSTR(kIOFBAttributesKey));
+						}
+					}
+				} // IOFBAttributes
+
 				{ // IOFBProbeOptions
-					num = CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBProbeOptionsKey));
+					num = (CFNumberRef)CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBProbeOptionsKey));
 					if (num) {
 						CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 						iprintf("IOFBProbeOptions = %s%s%s%s%s%s Transform:",
@@ -2952,7 +2896,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 				} // IOFBProbeOptions
 
 				{ // IOFBScalerInfo
-					CFDataRef IOFBScalerInfo = CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBScalerInfoKey));
+					CFDataRef IOFBScalerInfo = (CFDataRef)CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBScalerInfoKey));
 					if (IOFBScalerInfo) {
 						iprintf("IOFBScalerInfo = { ");
 						DumpOneDisplayScalerInfo(IOFBScalerInfo);
@@ -2962,7 +2906,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 				} //IOFBScalerInfo
 
 				{ // IOFBTimingRange
-					CFDataRef IOFBTimingRange = CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBTimingRangeKey));
+					CFDataRef IOFBTimingRange = (CFDataRef)CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBTimingRangeKey));
 					if (IOFBTimingRange) {
 						iprintf("IOFBTimingRange = { ");
 						DumpOneDisplayTimingRange(IOFBTimingRange);
@@ -2972,7 +2916,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 				} //IOFBTimingRange
 
 				{ // IOFBTransform
-					num = CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBTransformKey));
+					num = (CFNumberRef)CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBTransformKey));
 					if (num) {
 						CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 						iprintf("IOFBTransform = ");
@@ -2983,7 +2927,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 				} // IOFBTransform
 
 				{ // startup-timing
-					CFDataRef IOTimingInformationData = CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBStartupTimingPrefsKey));
+					CFDataRef IOTimingInformationData = (CFDataRef)CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBStartupTimingPrefsKey));
 					if (IOTimingInformationData) {
 						iprintf("startup-timing = { ");
 						DumpOneTimingInformation(IOTimingInformationData, modeAlias);
@@ -2993,12 +2937,12 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 				} // startup-timing
 
 				{ // IOFBI2CInterfaceIDs
-					CFArrayRef IOFBI2CInterfaceIDs = CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBI2CInterfaceIDsKey));
+					CFArrayRef IOFBI2CInterfaceIDs = (CFArrayRef)CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBI2CInterfaceIDsKey));
 					if (IOFBI2CInterfaceIDs && CFGetTypeID(IOFBI2CInterfaceIDs) == CFArrayGetTypeID()) {
 						iprintf("IOFBI2CInterfaceIDs = (\n"); INDENT
 						CFIndex itemCount = CFArrayGetCount(IOFBI2CInterfaceIDs);
 						for (int i = 0; i < itemCount; i++) {
-							num = CFArrayGetValueAtIndex(IOFBI2CInterfaceIDs, i);
+							num = (CFNumberRef)CFArrayGetValueAtIndex(IOFBI2CInterfaceIDs, i);
 							if (num && CFGetTypeID(num) == CFNumberGetTypeID()) {
 								SInt64 numValue;
 								CFNumberGetValue(num, kCFNumberSInt64Type, &numValue);
@@ -3016,12 +2960,12 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 				} // IOFBI2CInterfaceIDs
 
 				{ // IOFBI2CInterfaceInfo
-					CFArrayRef IOFBI2CInterfaceInfo = CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBI2CInterfaceInfoKey));
+					CFArrayRef IOFBI2CInterfaceInfo = (CFArrayRef)CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBI2CInterfaceInfoKey));
 					if (IOFBI2CInterfaceInfo && CFGetTypeID(IOFBI2CInterfaceInfo) == CFArrayGetTypeID()) {
 						iprintf("IOFBI2CInterfaceInfo = (\n"); INDENT
 						CFIndex itemCount = CFArrayGetCount(IOFBI2CInterfaceInfo);
 						for (int i = 0; i < itemCount; i++) {
-							CFDictionaryRef dict = CFArrayGetValueAtIndex(IOFBI2CInterfaceInfo, i);
+							CFDictionaryRef dict = (CFDictionaryRef)CFArrayGetValueAtIndex(IOFBI2CInterfaceInfo, i);
 							if (dict && CFGetTypeID(dict) == CFDictionaryGetTypeID()) {
 								iprintf("[%d] = ", i);
 								CFMutableDictionaryRef copy = DumpI2CProperties(dict);
@@ -3064,7 +3008,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 				
 #define OneNumber0(_name, _format, _calc) \
 				{ \
-					num = CFDictionaryGetValue(IOFBProperties, CFSTR(_name)); \
+					num = (CFNumberRef)CFDictionaryGetValue(IOFBProperties, CFSTR(_name)); \
 					if (num && CFGetTypeID(num) == CFNumberGetTypeID()) { \
 						CFNumberGetValue(num, kCFNumberSInt32Type, &numValue); \
 						iprintf("%s = " _format ";\n", _name, _calc); \
@@ -3075,7 +3019,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 
 #define OneDataNum(_name, _bits, _format) \
 				{ \
-					CFDataRef data = CFDictionaryGetValue(IOFBProperties, CFSTR(_name)); \
+					CFDataRef data = (CFDataRef)CFDictionaryGetValue(IOFBProperties, CFSTR(_name)); \
 					if (data && CFGetTypeID(data) == CFDataGetTypeID()) { \
 						const UInt8* thebytes = CFDataGetBytePtr(data); \
 						CFIndex len = CFDataGetLength(data); \
@@ -3107,8 +3051,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 	} // IOFramebuffer
 	OUTDENT iprintf("}; // IOFramebuffer\n\n");
 
-	io_service_t ioDisplayService;
-	if( (ioDisplayService = IODisplayForFramebuffer( ioFramebufferService, kNilOptions)))
+	if(ioDisplayService)
 	{
 		iprintf("IODisplay 0x%0x = {\n", ioDisplayService); INDENT
 		CFMutableDictionaryRef IODProperties = NULL;
@@ -3118,7 +3061,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 				DumpDisplayInfo(IODProperties);
 
 				{ // AppleDisplayType
-					num = CFDictionaryGetValue(IODProperties, CFSTR(kAppleDisplayTypeKey));
+					num = (CFNumberRef)CFDictionaryGetValue(IODProperties, CFSTR(kAppleDisplayTypeKey));
 					if (num) {
 						CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 						iprintf("AppleDisplayType = %s;\n",
@@ -3153,7 +3096,8 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 				} // AppleDisplayType
 
 				{ // AppleSense
-					num = CFDictionaryGetValue(IODProperties, CFSTR(kAppleSenseKey));
+					// https://developer.apple.com/library/archive/technotes/hw/hw_30.html
+					num = (CFNumberRef)CFDictionaryGetValue(IODProperties, CFSTR(kAppleSenseKey));
 					if (num) {
 						CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 						iprintf("AppleSense = %s%s%s,%s%s%d%d/%d%d/%d%d:%s;\n",
@@ -3234,7 +3178,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 				StdFBShmem_t *fbshmem;
 				mach_vm_size_t size;
 
-				err = IOConnectMapMemory(
+				kerr = IOConnectMapMemory(
 					ioFramebufferConnect,
 					kIOFBCursorMemory,
 					selfTask,
@@ -3242,12 +3186,12 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 					&size,
 					kIOMapAnywhere | kIOMapDefaultCache | kIOMapReadOnly
 				);
-				if (KERN_SUCCESS == err) {
+				if (KERN_SUCCESS == kerr) {
 					iprintf("kIOFBCursorMemory = { size:%lld version:%d location:%dx%d };\n", size, fbshmem->version, fbshmem->cursorLoc.x, fbshmem->cursorLoc.y);
 					IOConnectUnmapMemory(ioFramebufferConnect, kIOFBCursorMemory, selfTask, (mach_vm_address_t)fbshmem);
 				} // if IOConnectMapMemory
 
-				err = IOConnectMapMemory(
+				kerr = IOConnectMapMemory(
 					ioFramebufferConnect,
 					kIOFBVRAMMemory,
 					selfTask,
@@ -3255,7 +3199,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 					&size,
 					kIOMapAnywhere | kIOMapDefaultCache | kIOMapReadOnly
 				);
-				if (KERN_SUCCESS == err) {
+				if (KERN_SUCCESS == kerr) {
 					iprintf("kIOFBVRAMMemory = { size:%gMB };\n", size / (1024 * 1024.0));
 					IOConnectUnmapMemory(ioFramebufferConnect, kIOFBCursorMemory, selfTask, (mach_vm_address_t)fbshmem);
 				} // if IOConnectMapMemory
@@ -3300,16 +3244,16 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 							IOI2CRequest request;
 
 							/*
-								I2C Slave Address Pair/Address
-										Specification
-								74h/75h RESERVED for HDCP (Primary Link Port)
-								76h/77h RESERVED for HDCP (Secondary Link Port)
-								80h/81h RESERVED for DisplayPort (Dual-Mode Video Adapter)
-								A0h/A1h EDID
-								A4h/A5h DisplayID
-								A8h/A9h RESERVED for HDMI
-								60h     E-DDC Segment Pointer (see Section 2.2.5)
-								6Eh/6Fh RESERVED for DDC/CI communication (e.g., MCCS)
+								    I2C Slave Address Pair/Address
+								    		Specification
+								3Ah 74h/75h RESERVED for HDCP (Primary Link Port)
+								3Bh 76h/77h RESERVED for HDCP (Secondary Link Port)
+								40h 80h/81h RESERVED for DisplayPort (Dual-Mode Video Adapter)
+								50h A0h/A1h EDID
+								52h A4h/A5h DisplayID
+								54h A8h/A9h RESERVED for HDMI (see §10.4 "Status and Control Data Channel" in HDMI 2.0 spec)
+								30h 60h     E-DDC Segment Pointer (see Section 2.2.5)
+								37h 6Eh/6Fh RESERVED for DDC/CI communication (e.g., MCCS)
 							*/
 
 							if (0)
@@ -3469,7 +3413,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 												resembles a combination of an E-DDC method and the "DDC Read
 												at the Current Address" method.
 											 
-												Tested in Montery.
+												Tested in Monterey.
 												Works with Nvidia GTX 680 and Intel 630.
 												Does not work with AMD W5700.
 											*/
@@ -3563,7 +3507,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 									request.sendTransactionType = kIOI2CSimpleTransactionType;
 									request.sendAddress = 0x6E; // Destination address (DDC/CI)
 									UInt8 senddata[] = {
-										address, // Source address
+										(UInt8)address, // Source address
 										0x81, // Length
 										0xf1, // Identification request op code
 										0x00, // Checksum
@@ -3691,7 +3635,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 
 								int vcpCapabilitiesOffset = 0;
 								int vcpCapabilitiesMaxSize = 1000;
-								char *vcpCapabilitiesBytes = malloc(vcpCapabilitiesMaxSize);
+								char *vcpCapabilitiesBytes = (char *)malloc(vcpCapabilitiesMaxSize);
 								
 								while (1) {
 									UInt8 chunkdata[32+6];
@@ -3710,8 +3654,8 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 											0x51, // Source address
 											0x83, // Length
 											0xf3, // Capabilities request op code
-											vcpCapabilitiesOffset >> 8, // Offset value High byte
-											vcpCapabilitiesOffset & 0xff, // Offset value Low byte
+											(UInt8)(vcpCapabilitiesOffset >> 8), // Offset value High byte
+											(UInt8)(vcpCapabilitiesOffset & 0xff), // Offset value Low byte
 											0x00, // Checksum
 										};
 										request.sendBytes = sizeof(senddata);
@@ -3768,7 +3712,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 
 									if (vcpCapabilitiesOffset + chunksize > vcpCapabilitiesMaxSize) {
 										vcpCapabilitiesMaxSize += 1000;
-										vcpCapabilitiesBytes = realloc(vcpCapabilitiesBytes, vcpCapabilitiesMaxSize);
+										vcpCapabilitiesBytes = (char *)realloc(vcpCapabilitiesBytes, vcpCapabilitiesMaxSize);
 									}
 									memcpy(vcpCapabilitiesBytes + vcpCapabilitiesOffset, chunkdata + 5, chunksize);
 									vcpCapabilitiesOffset += chunksize;
@@ -3779,7 +3723,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 										iprintf("(last byte at offset %d is not null)\n", vcpCapabilitiesOffset - 1);
 										if (vcpCapabilitiesOffset + 1 > vcpCapabilitiesMaxSize) {
 											vcpCapabilitiesMaxSize += 1;
-											vcpCapabilitiesBytes = realloc(vcpCapabilitiesBytes, vcpCapabilitiesMaxSize);
+											vcpCapabilitiesBytes = (char *)realloc(vcpCapabilitiesBytes, vcpCapabilitiesMaxSize);
 										}
 										vcpCapabilitiesBytes[vcpCapabilitiesOffset] = 0;
 										vcpCapabilitiesOffset++;
@@ -3793,7 +3737,9 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 										cprintf(";\n");
 									}
 									iprintf("VCP string = \"%s\";\n", vcpCapabilitiesBytes);
+									iprintf("VCP parsed = {\n"); INDENT
 									parsevcp(0, vcpCapabilitiesBytes, i2cconnect, val_IOI2CTransactionTypes);
+									OUTDENT iprintf("} // VCP parsed\n");
 								}
 								
 								free (vcpCapabilitiesBytes);
@@ -3848,8 +3794,8 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 											0x84, // Length
 											0xe2, // Table read op code
 											0x78, // VCP opcode for EDID
-											blockNdx, // Offset value High byte
-											chunkNdx * 32, // Offset value Low byte
+											(UInt8)blockNdx, // Offset value High byte
+											(UInt8)(chunkNdx * 32), // Offset value Low byte
 											0x00, // Checksum
 										};
 										//senddata[1] += sizeof(data) - 2;
@@ -3918,7 +3864,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 							{ // DisplayPort
 								iprintf("DisplayPort = {\n"); INDENT
 								UInt8 path[16];
-								DoOneDisplayPort(i2cconnect, path, 0);
+								DoOneDisplayPort(ioFramebufferService, i2cconnect, path, 0, false);
 								OUTDENT iprintf("}; // DisplayPort\n");
 							} // DisplayPort
 
@@ -3945,10 +3891,11 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 } // DumpDisplayService
 
 
+
 char * GetServicePath(io_service_t device)
 {
 	// for an ioregistry device, return an ioregistry path string
-	char *ioregPath = malloc(4096);
+	char *ioregPath = (char *)malloc(4096);
 	ioregPath[0] = 0;
 
 	char temp[4096];
@@ -4005,20 +3952,39 @@ void DumpAllDisplaysInfo (void) {
 	CGSDisplayModeDescription * modes[20]; // all the modes for each display
 	int modeAlias[20];
 	
+#define checkapi(x) iprintf("macOS %s " #x "\n", x ? "has" : "does not have");
+	
+	checkapi(SLSIsDisplayModeVRR)
+	checkapi(SLSIsDisplayModeProMotion)
+	checkapi(SLSGetDisplayModeMinRefreshRate)
+
+	checkapi(SLSDisplaySetHDRModeEnabled)
+	checkapi(SLSDisplayIsHDRModeEnabled)
+	checkapi(SLSDisplaySupportsHDRMode)
+
+	checkapi(CGSEnableHDR)
+	checkapi(CGSIsHDREnabled)
+	checkapi(CGSIsHDRSupported)
+
+	checkapi(DisplayServicesGetBrightness);
+	checkapi(DisplayServicesSetBrightness);
+	
+	iprintf("\n");
+	
 	uint32_t displayCount;
 	CGGetOnlineDisplayList(20, onlineDisplays, &displayCount);
-	cprintf("%d Online Monitors found\n", displayCount);
+	iprintf("%d Online Monitors found\n", displayCount);
 	//CGSConnectionID connectionID = CGSMainConnectionID();
 	CGDirectDisplayID mainDisplay = CGMainDisplayID();
-	cprintf("Main display: 0x%x\n", mainDisplay);
+	iprintf("Main display: 0x%x\n", mainDisplay);
 
-	cprintf("-----------------------------------------------------\n");
-	iprintf("DISPLAYS = [\n"); INDENT
+	iprintf("-----------------------------------------------------\n");
+	iprintf("DISPLAYS = {\n"); INDENT
 	for (uint32_t displayIndex = 0; displayIndex < displayCount; displayIndex++) {
 		CGDirectDisplayID display = onlineDisplays[displayIndex];
 
 		CGSGetNumberOfDisplayModes(display, &nModes[displayIndex]);
-		modes[displayIndex] = malloc(nModes[displayIndex] * sizeof(CGSDisplayModeDescription));
+		modes[displayIndex] = (CGSDisplayModeDescription *)malloc(nModes[displayIndex] * sizeof(CGSDisplayModeDescription));
 		if (!modes[displayIndex]) {
 			iprintf("Error: Not enough memory for %d modes\n", nModes[displayIndex]);
 			nModes[displayIndex] = 0;
@@ -4052,7 +4018,10 @@ void DumpAllDisplaysInfo (void) {
 		iprintf("modelNumber = 0x%x;\n", CGDisplayModelNumber(display)); // A model number for the monitor associated with the specified display. If I/O Kit can’t identify the monitor, kDisplayProductIDGeneric is returned. If no monitor is connected, a value of 0xFFFFFFFF is returned.
 		iprintf("serialNumber = %d;\n", CGDisplaySerialNumber(display)); // A serial number for the monitor associated with the specified display, or a constant to indicate an exception—see the discussion below.
 		iprintf("unitNumber = %d;\n", CGDisplayUnitNumber(display)); // A logical unit number for the specified display.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 		iprintf("IOService = 0x%x;\n", CGDisplayIOServicePort(display)); // Return the IOKit service port of a display.
+#pragma clang diagnostic pop
 		iprintf("Main = %s;\n", CGDisplayIsMain(display) ? "true" : "false"); // If true, the specified display is currently the main display; otherwise, false.
 		iprintf("Active = %s;\n", CGDisplayIsActive(display) ? "true" : "false"); // If true, the specified display is active; otherwise, false.
 		iprintf("Online = %s;\n", CGDisplayIsOnline(display) ? "true" : "false"); // If true, the specified display is connected; otherwise, false.
@@ -4071,10 +4040,10 @@ void DumpAllDisplaysInfo (void) {
 		
 		float brightness = 1;
 		int err;
-		err = DisplayServicesGetBrightness(display, &brightness);
-		iprintf("Brightness = %g (err:%d);\n", brightness, err);
-
-		if (SLSIsDisplayModeVRR)         iprintf("IsModeVRR = %d;\n", SLSIsDisplayModeVRR(display));
+		if (DisplayServicesGetBrightness) {
+			err = DisplayServicesGetBrightness(display, &brightness);
+			iprintf("Brightness = %g (err:%d);\n", brightness, err);
+		}
 
 		bool HDRSupportedSLS = false;
 		bool HDRSupportedCGS = false;
@@ -4091,11 +4060,11 @@ void DumpAllDisplaysInfo (void) {
 			CGDisplayConfigRef config;
 			result = CGBeginDisplayConfiguration(&config);
 			if (!result) {
-				//iprintf("SetBrightness to 0 (err: %d)\n", err = DisplayServicesSetBrightness(display, 0.0)); // we don't need to set brightness to change HRD setting.
+				//iprintf("SetBrightness to 0 (err: %d)\n", err = DisplayServicesSetBrightness(display, 0.0)); // we don't need to set brightness to change HDR setting.
 				if (SLSDisplaySetHDRModeEnabled) iprintf("ToggleHDR(SLS) = %x;\n", SLSDisplaySetHDRModeEnabled(display, HDREnabledSLS ? 0 : 1, 0, 0));
 				else if (CGSEnableHDR          ) iprintf("ToggleHDR(CGS) = %x;\n",     CGSEnableHDR           (display, HDREnabledCGS ? 0 : 1, 0, 0)); // I don't think CGSEnableHDR works - needs more investigation to find out how Catalina enables HDR.
 				CGCompleteDisplayConfiguration(config, kCGConfigureForSession);
-				//iprintf("SetBrightness to %g (err: %d)\n", brightness, err = DisplayServicesSetBrightness(display, brightness)); // we don't need to set brightness to change HRD setting.
+				//iprintf("SetBrightness to %g (err: %d)\n", brightness, err = DisplayServicesSetBrightness(display, brightness)); // we don't need to set brightness to change HDR setting.
 				if (SLSDisplayIsHDRModeEnabled)  iprintf("HDREnabled(SLS) = %d;\n", HDREnabledSLS = SLSDisplayIsHDRModeEnabled(display));
 				if (CGSIsHDREnabled           )  iprintf("HDREnabled(CGS) = %d;\n", HDREnabledCGS =            CGSIsHDREnabled(display)); // returns 1 even for displays that don't support HDR. Maybe it's 1 if any display supports HDR?
 			}
@@ -4110,55 +4079,54 @@ void DumpAllDisplaysInfo (void) {
 		
 		OUTDENT iprintf("}, // Monitor[%d]\n", displayIndex);
 	}
-	OUTDENT iprintf("]; // DISPLAYS\n");
+	OUTDENT iprintf("}; // DISPLAYS\n");
 
-	cprintf("-----------------------------------------------------\n");
-	iprintf("IOSERVICE = [\n"); INDENT
-	for (uint32_t displayIndex = 0; displayIndex < displayCount; displayIndex++) {
-		CGDirectDisplayID display = onlineDisplays[displayIndex];
-		char *servicePath = NULL;
-		CGError result = CGSServiceForDisplayNumber(display, &onlineServices[displayIndex]);
-		if(result == kCGErrorSuccess) {
-			servicePath = GetServicePath(onlineServices[displayIndex]);
-		}
-		iprintf("Monitor[%d]: %s%s= {\n", displayIndex, servicePath ? servicePath : "", servicePath ? " " : ""); INDENT
-		if(result == kCGErrorSuccess) {
-			DumpDisplayService(onlineServices[displayIndex], modeAlias[displayIndex]);
-		}
-		OUTDENT iprintf("}, // Monitor[%d]: %s\n\n", displayIndex, servicePath ? servicePath : "");
-		if (servicePath) free (servicePath);
-	}
-
-	char *serviceTypes[] = { "IOFramebuffer", "IOMobileFramebuffer", "DCPAVServiceProxy", "DCPDPServiceProxy" };
-	for (int serviceTypeNdx = 0; serviceTypeNdx < sizeof(serviceTypes) / sizeof(serviceTypes[0]); serviceTypeNdx++)
 	{
-		io_iterator_t iterator;
-		kern_return_t kr = IOServiceGetMatchingServices(kIOMasterPortDefault, IOServiceMatching(serviceTypes[serviceTypeNdx]), &iterator);
-		if (kr == KERN_SUCCESS) {
-			for (io_service_t device; IOIteratorIsValid(iterator) && (device = IOIteratorNext(iterator)); IOObjectRelease(device))
-			{
-				bool found = false;
-				for (uint32_t displayIndex = 0; !found && displayIndex < displayCount; displayIndex++) {
-					if (onlineServices[displayIndex] == device) {
-						found = true;
-					}
-				}
-				if (!found) {
-					char *servicePath = GetServicePath(device);
-					iprintf("%s: %s%s= {\n", serviceTypes[serviceTypeNdx], servicePath ? servicePath : "", servicePath ? " " : ""); INDENT
-					DumpDisplayService(device, 0);
-					OUTDENT iprintf("}, // %s: %s\n\n", serviceTypes[serviceTypeNdx], servicePath ? servicePath : "");
-					if (servicePath) free (servicePath);
-				}
+		iprintf("-----------------------------------------------------\n");
+		iprintf("IOSERVICE = {\n"); INDENT
+		for (uint32_t displayIndex = 0; displayIndex < displayCount; displayIndex++) {
+			CGDirectDisplayID display = onlineDisplays[displayIndex];
+			char *servicePath = NULL;
+			CGError result = CGSServiceForDisplayNumber(display, &onlineServices[displayIndex]);
+			if(result == kCGErrorSuccess) {
+				servicePath = GetServicePath(onlineServices[displayIndex]);
 			}
-			IOObjectRelease(iterator);
+			iprintf("Monitor[%d]: %s%s= {\n", displayIndex, servicePath ? servicePath : "", servicePath ? " " : ""); INDENT
+			if(result == kCGErrorSuccess) {
+				DumpDisplayService(onlineServices[displayIndex], modeAlias[displayIndex]);
+			}
+			OUTDENT iprintf("}, // Monitor[%d]: %s\n\n", displayIndex, servicePath ? servicePath : "");
+			if (servicePath) free (servicePath);
 		}
-	}
-	
-	OUTDENT iprintf("]; // IOSERVICE\n");
 
-	cprintf("-----------------------------------------------------\n");
-	iprintf("CURRENT MODE = [\n"); INDENT
+		const char *serviceTypes[] = { "IOFramebuffer", "IOMobileFramebuffer", "DCPAVServiceProxy", "DCPDPServiceProxy" };
+		for (int serviceTypeNdx = 0; serviceTypeNdx < sizeof(serviceTypes) / sizeof(serviceTypes[0]); serviceTypeNdx++) {
+			io_iterator_t iterator;
+			kern_return_t kr = IOServiceGetMatchingServices(kIOMasterPortDefault, IOServiceMatching(serviceTypes[serviceTypeNdx]), &iterator);
+			if (kr == KERN_SUCCESS) {
+				for (io_service_t device; IOIteratorIsValid(iterator) && (device = IOIteratorNext(iterator)); IOObjectRelease(device)) {
+					bool found = false;
+					for (uint32_t displayIndex = 0; !found && displayIndex < displayCount; displayIndex++) {
+						if (onlineServices[displayIndex] == device) {
+							found = true;
+						}
+					}
+					if (!found) {
+						char *servicePath = GetServicePath(device);
+						iprintf("%s: %s%s= {\n", serviceTypes[serviceTypeNdx], servicePath ? servicePath : "", servicePath ? " " : ""); INDENT
+						DumpDisplayService(device, 0);
+						OUTDENT iprintf("}, // %s: %s\n\n", serviceTypes[serviceTypeNdx], servicePath ? servicePath : "");
+						if (servicePath) free (servicePath);
+					}
+				} // for io_service_t
+				IOObjectRelease(iterator);
+			}
+		}
+		OUTDENT iprintf("}; // IOSERVICE\n");
+	}
+
+	iprintf("-----------------------------------------------------\n");
+	iprintf("CURRENT MODE = {\n"); INDENT
 	for (uint32_t displayIndex = 0; displayIndex < displayCount; displayIndex++) {
 		CGDirectDisplayID display = onlineDisplays[displayIndex];
 		iprintf("Monitor[%d] = {\n", displayIndex); INDENT
@@ -4180,7 +4148,10 @@ void DumpAllDisplaysInfo (void) {
 		}
 
 		{
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 			CFDictionaryRef modeDictionary = CGDisplayCurrentMode(display); // CGDisplayCurrentMode returns NULL when HDR is enabled
+#pragma clang diagnostic pop
 			iprintf("current mode by CGDisplayCurrentMode (deprecated)      %s= { ", modeNum < 10 ? "" : modeNum < 100 ? " " : modeNum < 1000 ? "  " : "   ");
 			DumpOneCGDisplayMode((CGDisplayModeRef)modeDictionary, modeAlias[displayIndex]);
 			cprintf(" };\n");
@@ -4198,13 +4169,13 @@ void DumpAllDisplaysInfo (void) {
 		
 		OUTDENT iprintf("}, // Monitor[%d]\n", displayIndex);
 	}
-	OUTDENT iprintf("]; // CURRENT MODE\n");
+	OUTDENT iprintf("}; // CURRENT MODE\n");
 
-	cprintf("-----------------------------------------------------\n");
-	iprintf("ALL MODES = [\n"); INDENT
+	iprintf("-----------------------------------------------------\n");
+	iprintf("ALL MODES = {\n"); INDENT
 	for (uint32_t displayIndex = 0; displayIndex < displayCount; displayIndex++) {
 		CGDirectDisplayID display = onlineDisplays[displayIndex];
-		iprintf("Monitor[%d] = [\n", displayIndex); INDENT
+		iprintf("Monitor[%d] = {\n", displayIndex); INDENT
 
 		{ // CGDisplayAvailableModes/CGDisplayCurrentMode
 			/*
@@ -4212,22 +4183,25 @@ void DumpAllDisplaysInfo (void) {
 				bpc is 8bpc even when doing 10bpc framebuffer or HDR.
 				Usually the only difference between 8bpc and 10bpc modes is the mode number. It is even for 8bpc. The 10bpc mode number is 8bpc mode number plus 1.
 			*/
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 			CFArrayRef availableModes = CGDisplayAvailableModes(display);
-			iprintf("CGDisplayAvailableModes (deprecated) (%d modes) = [\n", (int)CFArrayGetCount(availableModes)); INDENT
+#pragma clang diagnostic pop
+			iprintf("CGDisplayAvailableModes (deprecated) (%d modes) = {\n", (int)CFArrayGetCount(availableModes)); INDENT
 			for ( int i = 0; i < CFArrayGetCount( availableModes ); i++ ) {
-				CGDisplayModeRef displayMode = (CGDisplayModeRef) CFArrayGetValueAtIndex( availableModes, i );
+				CGDisplayModeRef displayMode = (CGDisplayModeRef)CFArrayGetValueAtIndex( availableModes, i );
 				iprintf("{ ");
 				DumpOneCGDisplayMode(displayMode, modeAlias[displayIndex]);
 				cprintf(" },\n");
 			}
-			OUTDENT iprintf("]; // CGDisplayAvailableModes\n");
+			OUTDENT iprintf("}; // CGDisplayAvailableModes\n");
 		} // CGDisplayAvailableModes
 		
 		{ // CGDisplayCopyAllDisplayModes
 			/*
 				CGDisplayCopyAllDisplayModes/CGDisplayCopyDisplayMode is same as CGDisplayAvailableModes/CGDisplayCurrentMode above but includes the following 7 fields and there is double the modes - one for 8bpc framebuffer and another for 10bpc
 
-					kCGDisplayModeIsTelevisionOutput = 0; // actually, this flag is included for CGDisplayAvailableModes/CGDisplayCurrentMode in Montery but not included in Catalina
+					kCGDisplayModeIsTelevisionOutput = 0; // actually, this flag is included for CGDisplayAvailableModes/CGDisplayCurrentMode in Monterey but not included in Catalina
 					kCGDisplayModeIsInterlaced = 0;
 					kCGDisplayModeIsStretched = 0;
 					kCGDisplayModeIsUnavailable = 0;
@@ -4244,11 +4218,11 @@ void DumpAllDisplaysInfo (void) {
 			CFDictionaryRef options = CFDictionaryCreate(kCFAllocatorDefault, (const void**) keys, (const void**) values, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks );
 			CFArrayRef availableModes = CGDisplayCopyAllDisplayModes(display, options);
 
-			iprintf("CGDisplayCopyAllDisplayModes (%d modes) = [\n", (int)CFArrayGetCount(availableModes)); INDENT
+			iprintf("CGDisplayCopyAllDisplayModes (%d modes) = {\n", (int)CFArrayGetCount(availableModes)); INDENT
 
 			//CFOutput(availableModes); // print them one at a time
 			for ( int i = 0; i < CFArrayGetCount( availableModes ); i++ ) {
-				CGDisplayModeRef displayMode = (CGDisplayModeRef) CFArrayGetValueAtIndex( availableModes, i );
+				CGDisplayModeRef displayMode = (CGDisplayModeRef)CFArrayGetValueAtIndex( availableModes, i );
 				iprintf("{ ");
 				DumpOneCGDisplayMode(displayMode, modeAlias[displayIndex]);
 				cprintf(" },\n");
@@ -4256,7 +4230,7 @@ void DumpAllDisplaysInfo (void) {
 
 			CFRelease( options );
 			CFRelease( availableModes );
-			OUTDENT iprintf("]; // CGDisplayCopyAllDisplayModes\n");
+			OUTDENT iprintf("}; // CGDisplayCopyAllDisplayModes\n");
 		} // CGDisplayCopyAllDisplayModes
 
 		{ // CGSGetNumberOfDisplayModes
@@ -4264,23 +4238,370 @@ void DumpAllDisplaysInfo (void) {
 				CGSGetDisplayModeDescriptionOfLength is similar to CGDisplayCopyAllDisplayModes but includes some other fields.
 				It adds modes that have the 0x200000 = kDisplayModeValidForMirroringFlag or the 0x01000000 = kDisplayModeValidForAirPlayFlag IOFlag set.
 			*/
-			iprintf("CGSGetDisplayModeDescriptionOfLength (%d modes) = [\n", nModes[displayIndex]); INDENT
+			iprintf("CGSGetDisplayModeDescriptionOfLength (%d modes) = {\n", nModes[displayIndex]); INDENT
 			for (int i = 0; i < nModes[displayIndex]; i++) {
 				iprintf("{ ");
 				DumpOneDisplayModeDescription(&modes[displayIndex][i], modeAlias[displayIndex]);
-				cprintf(" },\n");
+				cprintf(" }");
+
+				bool VRR = false;
+				bool ProMotion = false;
+				float minRefreshRate = 0.0;
+				UInt32 result = 0;
+
+				if (SLSIsDisplayModeVRR) VRR = SLSIsDisplayModeVRR(display, i);
+				if (SLSIsDisplayModeProMotion) ProMotion = SLSIsDisplayModeProMotion(display, i);
+				if (SLSGetDisplayModeMinRefreshRate) result = SLSGetDisplayModeMinRefreshRate(display, i, &minRefreshRate);
+
+				if (VRR) cprintf(" VRR");
+				if (ProMotion) cprintf(" ProMotion"); // Note: ProMotion is true only when VRR is true
+				if (minRefreshRate) cprintf(" min:%gHz", minRefreshRate); // this is zero unless VRR is true
+				if (result) cprintf(" result:%d", result);
+
+				cprintf(",\n");
 			}
-			OUTDENT iprintf("]; // CGSGetDisplayModeDescriptionOfLength\n");
+			OUTDENT iprintf("}; // CGSGetDisplayModeDescriptionOfLength\n");
 		} // CGSGetNumberOfDisplayModes
 
-		OUTDENT iprintf("], // Monitor[%d]\n", displayIndex);
+		OUTDENT iprintf("}, // Monitor[%d]\n", displayIndex);
 	} // for displayIndex
-	OUTDENT iprintf("]; // ALL MODES\n");
+	OUTDENT iprintf("}; // ALL MODES\n");
 }
 
+static void DisplayPortTest(void) {
+	io_iterator_t iterator;
+	kern_return_t kr = IOServiceGetMatchingServices(kIOMasterPortDefault, IOServiceMatching("IOFramebuffer"), &iterator);
+	if (kr == KERN_SUCCESS) {
+		for (io_service_t device; IOIteratorIsValid(iterator) && (device = IOIteratorNext(iterator)); IOObjectRelease(device)) {
+			char *servicePath = GetServicePath(device);
+			iprintf("IOFramebuffer: %s%s= {\n", servicePath ? servicePath : "", servicePath ? " " : ""); INDENT
+
+			io_service_t ioFramebufferService = device;
+			IOItemCount i2cInterfaceCount;
+			IOReturn result;
+			result = IOFBGetI2CInterfaceCount(ioFramebufferService, &i2cInterfaceCount);
+			if (KERN_SUCCESS == result) {
+				for (int interfaceBus = 0; interfaceBus < i2cInterfaceCount; interfaceBus++) {
+					io_service_t i2cservice;
+					result = IOFBCopyI2CInterfaceForBus(ioFramebufferService, interfaceBus, &i2cservice);
+					if (KERN_SUCCESS == result) {
+						CFMutableDictionaryRef dict = NULL;
+						result = IORegistryEntryCreateCFProperties(i2cservice, &dict, kCFAllocatorDefault, kNilOptions);
+						if (KERN_SUCCESS == result) {
+							UInt32 val_IOI2CTransactionTypes = 0;
+							CFTypeRef cf_IOI2CTransactionTypes = CFDictionaryGetValue(dict, CFSTR(kIOI2CTransactionTypesKey));
+							if (cf_IOI2CTransactionTypes) {
+								if (CFGetTypeID(cf_IOI2CTransactionTypes) == CFNumberGetTypeID()) {
+									if (CFNumberGetValue((CFNumberRef)cf_IOI2CTransactionTypes, kCFNumberSInt32Type, &val_IOI2CTransactionTypes)) {
+
+										IOI2CConnectRef i2cconnect;
+										result = IOI2CInterfaceOpen(i2cservice, kNilOptions, &i2cconnect);
+										if (KERN_SUCCESS == result) {
+											
+											if (val_IOI2CTransactionTypes & (1 << kIOI2CDisplayPortNativeTransactionType)) {
+												//UInt8 path[16];
+												//int pathLength = 0;
+												//DoOneDisplayPort(ioFramebufferService, i2cconnect, path, 0, true);
+												UInt8 *dpcd = (UInt8 *)malloc(0x100000);
+												bzero(dpcd, sizeof(0x100000));
+												do {
+													result = dp_dpcd_read(i2cconnect, 0, 16, &dpcd[0]);
+													if (result) break;
+													result = dp_dpcd_read(i2cconnect, 0x20, 16, &dpcd[0x20]);
+													if (result) break;
+
+													int numPorts = dpcd[DP_DOWN_STREAM_PORT_COUNT] & DP_PORT_COUNT_MASK;
+													if (numPorts) {
+														const unsigned char* messages[] = {
+//#if 0
+															"\p\x16\xc2\xcf\x14\xac",
+																// 10 c3 c6 14 00 9c
+
+                                                            "\p\x10\x02\xcb\x01\xd5",
+																// 10 2d 8c 01 00 00 00 00 00 00 00 00 00 00 00 00
+																// 00 00 00 00 04 90 c0 01 00 00 00 00 00 00 00 00
+																// 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 a5
+																//
+																// 10 25 45 00 00 00 00 00 00 00 00 00 00 00 00 00
+																// 00 00 00 23 c0 14 00 00 00 00 00 00 00 00 00 00
+																// 00 00 00 00 00 00 00 73
+
+															"\p\x10\x43\xc7\x10\x30\x46",
+																// 10 47 c0 10 31 07 80 07 80 22 00 00 00 00 00 00
+															
+															"\p\x21\x30\x02\xc4\x01\xd5",
+																// 20 30 2c 8c 01 00 00 00 00 00 00 00 00 00 00 00
+																// 00 00 00 00 00 04 90 c0 21 c0 14 2d 6e 13 00 01
+																// 00 00 00 2d 6e 13 00 01 00 00 00 00 02 00 00 b6
+																//
+																// 20 30 26 4f 00 00 00 00 00 00 00 00 00 00 00 00
+																// 00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00
+																// 00 00 00 00 00 00 00 00 00 a9
+//#endif
+                                                            "\p\x10\x16\xc3\x21\x30\x00\x30\x10\x5a\x9b\xff\xff\x00\x00\x00\x00\x5a\x9b\xff\xff\x00\x00\x00\x00\x97", // 10 16 c3 21 30 00 30 10 5a 9b ff ff 00 00 00 00 5a 9b ff ff 00 00 00 00 97
+																// 10 03 ce 21 03 14 00 00 00 00 00 00 00 00 00 00
+
+                                                            "\p\x21\x30\x43\xc8\x10\x10\xe2",
+																// 20 30 47 c5 10 11 07 80 07 80 31 00 00 00 00 00
+															
+															"\p\x32\x31\x02\xc6\x01\xd5",
+																// 30 31 2c 83 01 2d 6e 13 00 01 00 00 00 2d 6e 13
+																// 00 01 00 00 00 04 90 c0 01 00 00 00 00 00 00 00
+																// 00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 21
+																//
+																// 30 31 26 40 00 00 00 00 00 00 00 00 00 00 00 00
+																// 00 00 00 00 00 23 c0 12 bb ad 36 48 f2 87 ec 11
+																// bf dc 40 8d 5c b4 0c 1b 00 d5
+														
+															"\p\x32\x31\x43\xca\x10\x30\x46",
+																// 30 31 47 ca 10 31 07 80 07 80 22 00 00 00 00 00
+//#endif
+                                                        };
+
+														for (int i=0; i < sizeof(messages) / sizeof(UInt8*); i++) {
+															iprintf("=====================================================================\n");
+															Sideband_MSG_Body *body;
+                                                            int bodyLength;
+															DpError dperr;
+															gDumpSidebandMessage = kReq | kRep;
+                                                            UInt8 tmp[200];
+                                                            int len = messages[i][0];
+                                                            memcpy(tmp, &messages[i][1], len);
+															result = mst_transaction(ioFramebufferService, i2cconnect, tmp, len, &body, &bodyLength, &dperr);
+															gDumpSidebandMessage = 0;
+                                                            cprintf("\n");
+//															if (result) break;
+														
+#if 0
+															for (int port = 0; port < numPorts; port++) {
+																path[pathLength] = port;
+																iprintf("Port %d = {\n", port); INDENT
+																DoOneDisplayPort(ioFramebufferService, i2cconnect, path, pathLength + 1, true);
+																OUTDENT iprintf("}; // Port %d\n", port);
+															} // for port
+#endif
+                                                            //usleep(3000000);
+
+														} // for messages
+                                                        return;
+													} // if mst
+												} while (0);
+											} // if kIOI2CDisplayPortNativeTransactionType
+											result = IOI2CInterfaceClose(i2cconnect, kNilOptions);
+										} // IOI2CInterfaceOpen
+									} // if CFNumberGetValue
+								} // if CFNumberGetTypeID
+							} // if cf_IOI2CTransactionTypes
+						} // if IORegistryEntryCreateCFProperties
+					} // if IOFBCopyI2CInterfaceForBus
+				} // for iterfaceBus
+			} // if IOFBGetI2CInterfaceCount
+
+			OUTDENT iprintf("}, // IOFramebuffer: %s\n\n", servicePath ? servicePath : "");
+			if (servicePath) free (servicePath);
+		} // for io_service_t
+		IOObjectRelease(iterator);
+	}
+} // DisplayPortTest
+
+static void DisplayPortMessages(void) {
+	{
+		typedef struct {
+			UInt32 address;
+			const unsigned char *data;
+		} SidebandMessage;
+		
+		SidebandMessage messages[] = {
+
+            { 0x01000, "\p\x16\xc2\xcf\x14\xac" },
+            { 0x01400, "\p\x10\xc3\xc6\x14\x00\x9c\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x10\x02\xcb\x01\xd5" },
+            { 0x01400, "\p\x10\x2d\x8c\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01410, "\p\x00\x00\x00\x00\x04\x90\xc0\x01\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01420, "\p\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x00\xa5" },
+            { 0x01400, "\p\x10\x25\x45\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01410, "\p\x00\x00\x00\x23\xc0\x14\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01420, "\p\x00\x00\x00\x00\x00\x00\x00\x73" },
+            { 0x01000, "\p\x10\x43\xc7\x10\x30\x46" },
+            { 0x01400, "\p\x10\x47\xc0\x10\x31\x07\x80\x07\x80\x22\x00\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x21\x30\x02\xc4\x01\xd5" },
+            { 0x01400, "\p\x20\x30\x2c\x8c\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01410, "\p\x00\x00\x00\x00\x00\x04\x90\xc0\x21\xc0\x14\x2d\x6e\x13\x00\x01" },
+            { 0x01420, "\p\x00\x00\x00\x2d\x6e\x13\x00\x01\x00\x00\x00\x00\x02\x00\x00\xb6" },
+            { 0x01400, "\p\x20\x30\x26\x4f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01410, "\p\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01420, "\p\x00\x00\x00\x00\x00\x00\x00\x00\x00\xa9" },
+            { 0x01000, "\p\x10\x16\xc3\x21\x30\x00\x30\x10\x5a\x9b\xff\xff\x00\x00\x00\x00" },
+            { 0x01010, "\p\x5a\x9b\xff\xff\x00\x00\x00\x00\x97" },
+            { 0x01400, "\p\x10\x03\xce\x21\x03\x14\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x21\x30\x43\xc8\x10\x10\xe2" },
+            { 0x01400, "\p\x20\x30\x47\xc5\x10\x11\x07\x80\x07\x80\x31\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x32\x31\x02\xc6\x01\xd5" },
+            { 0x01400, "\p\x30\x31\x2c\x83\x01\x2d\x6e\x13\x00\x01\x00\x00\x00\x2d\x6e\x13" },
+            { 0x01410, "\p\x00\x01\x00\x00\x00\x04\x90\xc0\x01\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01420, "\p\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00\x21" },
+            { 0x01400, "\p\x30\x31\x26\x40\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01410, "\p\x00\x00\x00\x00\x00\x23\xc0\x12\xbb\xad\x36\x48\xf2\x87\xec\x11" },
+            { 0x01420, "\p\xbf\xdc\x40\x8d\x5c\xb4\x0c\x1b\x00\xd5" },
+            { 0x01000, "\p\x32\x31\x43\xca\x10\x30\x46" },
+            { 0x01400, "\p\x30\x31\x47\xca\x10\x31\x07\x80\x07\x80\x22\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x02\xc0\x01\xd5" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x86\x01\xbb\xad\x36\x48\xf2\x87\xec\x11\xbf\xdc" },
+            { 0x01410, "\p\x40\x8d\x5c\xb4\x0c\x1b\x03\x90\xc0\x38\x40\x12\x00\x00\x00\x00" },
+            { 0x01420, "\p\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x12\x31\x40\x98" },
+            { 0x01400, "\p\x40\x31\x30\x13\x4d\x11\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa" },
+            { 0x01410, "\p\xbb\xcc\xdd\xee\xff\x78\x00\x84" },
+            { 0x01000, "\p\x43\x31\x30\x43\xcc\x10\x80\x5f" },
+            { 0x01400, "\p\x40\x31\x30\x47\xc7\x10\x81\x07\x80\x07\x80\x9e\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x09\xc1\x22\x81\x50\x01\x00\x10\x50\x01\xbc" },
+            { 0x01400, "\p\x40\x31\x30\x05\xc4\x22\x08\x01\x00\xee\x00\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x09\xc1\x22\x81\x50\x01\x00\x10\x50\x80\x86" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x86\x22\x08\x80\x00\xff\xff\xff\xff\xff\xff\x00" },
+            { 0x01410, "\p\x10\xac\xbf\xa0\x42\x4c\x4c\x30\x23\x1a\x01\x04\xa5\x35\x1e\x78" },
+            { 0x01420, "\p\x3a\xe2\x45\xa8\x55\x4d\xa3\x26\x0b\x50\x54\xa5\x4b\x00\x71\x80" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x0d\x4f\x81\x80\xa9\xc0\xa9\x40\xd1\xc0\xe1\x00" },
+            { 0x01410, "\p\xd1\x00\x01\x01\xa3\x66\x00\xa0\xf0\x70\x1f\x80\x30\x20\x35\x00" },
+            { 0x01420, "\p\x0f\x28\x21\x00\x00\x1a\x00\x00\x00\xff\x00\x47\x33\x44\x37\xa4" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x0d\x46\x36\x38\x4f\x30\x4c\x4c\x42\x0a\x00\x00" },
+            { 0x01410, "\p\x00\xfc\x00\x44\x45\x4c\x4c\x20\x50\x32\x34\x31\x35\x51\x0a\x20" },
+            { 0x01420, "\p\x00\x00\x00\xfd\x00\x1d\x4c\x1e\x8c\x1e\x00\x0a\x20\x20\x20\x33" },
+            { 0x01400, "\p\x40\x31\x30\x06\x40\x20\x20\x20\x01\x4d\x3c\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x09\xc1\x22\x81\x50\x01\x80\x10\x50\x80\xdd" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x86\x22\x08\x80\x02\x03\x1d\xf1\x50\x10\x1f\x20" },
+            { 0x01410, "\p\x05\x14\x04\x13\x12\x11\x03\x02\x16\x15\x07\x06\x01\x23\x09\x1f" },
+            { 0x01420, "\p\x07\x83\x01\x00\x00\x56\x5e\x00\xa0\xa0\xa0\x29\x50\x30\x20\xa6" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x0d\x35\x00\x0f\x28\x21\x00\x00\x1a\x02\x3a\x80" },
+            { 0x01410, "\p\x18\x71\x38\x2d\x40\x58\x2c\x25\x00\x0f\x28\x21\x00\x00\x1e\x01" },
+            { 0x01420, "\p\x1d\x00\x72\x51\xd0\x1e\x20\x6e\x28\x55\x00\x0f\x28\x21\x00\x91" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x0d\x00\x1e\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01410, "\p\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01420, "\p\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xa5" },
+            { 0x01400, "\p\x40\x31\x30\x06\x40\x00\x00\x00\x00\x8a\xb9\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x43\xcc\x10\x10\xe2" },
+            { 0x01400, "\p\x40\x31\x30\x47\xc7\x10\x11\x04\xec\x04\xec\xce\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x09\xc1\x22\x11\x50\x01\x00\x10\x50\x01\xcb" },
+            { 0x01400, "\p\x40\x31\x30\x05\xc4\x22\x01\x01\x00\x8b\x00\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x09\xc1\x22\x11\x50\x01\x00\x10\x50\x80\xf1" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x86\x22\x01\x80\x00\xff\xff\xff\xff\xff\xff\x00" },
+            { 0x01410, "\p\x04\x72\xb1\x06\x53\x8f\x00\x85\x32\x1c\x01\x04\xb5\x3c\x22\x78" },
+            { 0x01420, "\p\x3b\x27\x11\xac\x51\x35\xb5\x26\x0e\x50\x54\x23\x48\x00\x81\x7c" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x0d\x40\x81\x80\x81\xc0\x81\x00\x95\x00\xb3\x00" },
+            { 0x01410, "\p\xd1\xc0\x01\x01\x4d\xd0\x00\xa0\xf0\x70\x3e\x80\x30\x20\x35\x00" },
+            { 0x01420, "\p\x55\x50\x21\x00\x00\x1a\xb4\x66\x00\xa0\xf0\x70\x1f\x80\x08\xe3" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x0d\x20\x18\x04\x55\x50\x21\x00\x00\x1a\x00\x00" },
+            { 0x01410, "\p\x00\xfd\x0c\x30\x90\xff\xff\x6b\x01\x0a\x20\x20\x20\x20\x20\x20" },
+            { 0x01420, "\p\x00\x00\x00\xfc\x00\x58\x56\x32\x37\x33\x4b\x0a\x20\x20\x20\xb4" },
+            { 0x01400, "\p\x40\x31\x30\x06\x40\x20\x20\x20\x02\x21\xcf\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x09\xc1\x22\x11\x50\x01\x80\x10\x50\x80\xaa" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x86\x22\x01\x80\x02\x03\x48\xf1\x51\x01\x03\x04" },
+            { 0x01410, "\p\x12\x13\x05\x14\x1f\x90\x07\x02\x5d\x5e\x5f\x60\x61\x3f\x23\x09" },
+            { 0x01420, "\p\x07\x07\x83\x01\x00\x00\xe2\x00\xc0\x6d\x03\x0c\x00\x20\x00\x16" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x0d\x38\x78\x20\x00\x60\x01\x02\x03\x68\x1a\x00" },
+            { 0x01410, "\p\x00\x01\x01\x30\x90\x00\xe3\x05\xe3\x01\xe4\x0f\x00\xc0\x00\xe6" },
+            { 0x01420, "\p\x06\x07\x01\x61\x56\x1c\x07\x82\x80\x54\x70\x38\x4d\x40\x08\x20" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x0d\x20\xf8\x0c\x56\x50\x21\x00\x00\x1a\x40\xe7" },
+            { 0x01410, "\p\x00\x6a\xa0\xa0\x6a\x50\x08\x20\x98\x04\x55\x50\x21\x00\x00\x1a" },
+            { 0x01420, "\p\x6f\xc2\x00\xa0\xa0\xa0\x55\x50\x30\x20\x35\x00\x55\x50\x21\x70" },
+            { 0x01400, "\p\x40\x31\x30\x06\x40\x00\x00\x1e\x00\xb0\x46\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x0d\xc6\x22\x12\x30\x01\x01\x10\x50\x01\x00\x10\x50" },
+            { 0x01010, "\p\x80\x03" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x86\x22\x01\x80\x70\x12\x79\x00\x00\x03\x01\x28" },
+            { 0x01410, "\p\x9a\xa0\x01\x84\xff\x0e\xa0\x00\x2f\x80\x21\x00\x6f\x08\x3e\x00" },
+            { 0x01420, "\p\x03\x00\x05\x00\xe0\xf6\x00\x04\x7f\x07\x59\x00\x2f\x80\x1f\xa0" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x0d\x00\x6f\x08\x19\x00\x01\x00\x03\x00\x26\x00" },
+            { 0x01410, "\p\x08\x07\x07\x03\x03\xe0\x7f\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01420, "\p\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x98" },
+            { 0x01400, "\p\x40\x31\x30\x2b\x0d\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01410, "\p\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01420, "\p\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01400, "\p\x40\x31\x30\x06\x40\x00\x00\x00\x94\x90\x8a\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x43\xcc\x24\x10\xcb" },
+            { 0x01400, "\p\x40\x31\x30\x43\xc0\x24\x10\xcb\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x46\xce\x11\x10\x01\x04\x27\xa4" },
+            { 0x01400, "\p\x40\x31\x30\x46\xc2\x11\x10\x01\x04\x38\x8b\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x46\xce\x11\x10\x01\x00\x00\x78" },
+            { 0x01400, "\p\x40\x31\x30\x46\xc2\x11\x10\x01\x00\x00\x78\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x43\xcc\x25\x10\xc0" },
+            { 0x01400, "\p\x40\x31\x30\x43\xc0\x25\x10\xc0\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x46\xce\x11\x10\x01\x02\x13\x96" },
+            { 0x01400, "\p\x40\x31\x30\x46\xc2\x11\x10\x01\x02\x1c\xeb\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x43\xcc\x24\x80\x76" },
+            { 0x01400, "\p\x40\x31\x30\x43\xc0\x24\x80\x76\x00\x00\x00\x00\x00\x00\x00\x00" },
+            { 0x01000, "\p\x43\x31\x30\x47\xcb\x11\x81\x02\x01\x0a\x00\x59" },
+            { 0x01400, "\p\x40\x31\x30\x46\xc2\x11\x80\x02\x01\x18\xad\x00\x00\x00\x00\x00" },
+
+			{ 0x01000, "\p\x16\xc2\xcf\x14\xac\x11\x22\x33\x44\x55\x66\x77\x88" },
+			{ 0x01400, "\p\x10\xc3\xc6\x14\x00\x9c\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" }
+
+		};
+
+		for (int i=0; i < sizeof(messages) / sizeof(SidebandMessage); i++) {
+			DumpOneDisplayPortMessage((UInt8*)&messages[i].data[1], messages[i].data[0], messages[i].address);
+            cprintf("\n=============================\n");
+		}
+	}
+} // DisplayPortMessages
+
+
+
+const int doattributetest   = 0;
+const int doparsetest       = 0;
+const int dodisplayporttest = 0;
+const int dodumpall         = 1;
+
+
 int main(int argc, const char * argv[]) {
-	@autoreleasepool {
-		DumpAllDisplaysInfo();
-	} // @autoreleasepool
+//	@autoreleasepool {
+		IofbSetAttributeForDisplay(0, 'iofb', 'trac', -1, 0); // enable all Trace control options // TRACE_MASK
+        IofbSetAttributeForDisplay(0, 'iofb', 'i2cr', 1, 0); // dump doi2cRequest
+        IofbSetAttributeForDisplay(0, 'iofb', 'attr', 1, 0); // dump get/set atributes
+
+        IofbSetAttributeForDisplay(0, 'iofb', kConnectionColorModesSupported, 0, 0); // override
+        IofbSetAttributeForDisplay(0, 'iofb', kConnectionControllerDepthsSupported, 0, 0); // override
+        IofbSetAttributeForDisplay(0, 'iofb', kConnectionColorDepthsSupported, 0, 0); // override
+
+        // Can't use the polling method because the graphics driver may clear the interrupt after we read
+        // only part of the first message - so the next part of the first message may be from the second message.
+        // Instead, we must use the sideband flag which makes the WhateverGreen iofb patch read the entire
+        // sideband message before the interrupt is cleared.
+        IofbSetAttributeForDisplay(0, 'iofb', 'sbnd', 0, 0);
+
+        IofbSetAttributeForDisplay(0, 'iofb', 'vala', 0, 0); // validate all modes
+#if 0
+		{
+			UInt8 path[] = { 15,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
+			UInt32 msgLength;
+			UInt8 *reqdata = mst_encode_dpcd_read(path, 15, &msgLength, 0x12345, 16);
+			iprintf("msgLength=%d\n", msgLength);
+			DumpOneDisplayPortMessage(reqdata, msgLength, 0x1000);
+            cprintf("\n");
+		}
+#endif
+		
+#if 1
+		if (doattributetest) {
+			DoAttributeTest();
+		}
+		if (doparsetest) {
+			DisplayPortMessages();
+		}
+		
+		if (dodisplayporttest) {
+			DisplayPortTest();
+		}
+		if (dodumpall) {
+			DumpAllDisplaysInfo();
+		}
+		else {
+		}
+#endif
+	
+		iprintf("iogdiagnose = {\n"); INDENT
+		
+		iogdiagnose(false, NULL);
+
+		OUTDENT iprintf("} // iogdiagnose\n");
+		
+	//	} // @autoreleasepool
 	return 0;
 } // main

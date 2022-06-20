@@ -8,6 +8,6 @@
 #ifndef oui_h
 #define oui_h
 
-char* convertoui(int oui);
+const char* convertoui(int oui);
 
 #endif /* oui_h */

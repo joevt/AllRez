@@ -1,3 +1,7 @@
 DerivedData
 project.xcworkspace
 xcuserdata
+*.bc
+*.ii
+*.i
+*.s

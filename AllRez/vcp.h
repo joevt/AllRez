@@ -8,6 +8,12 @@
 #ifndef vcp_h
 #define vcp_h
 
+#include <CoreFoundation/CFBase.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <IOKit/i2c/IOI2CInterface.h>
 
 // These are in micoseconds
@@ -41,5 +47,10 @@
 void ddcsetchecksum(IOI2CRequest *request);
 bool ddcreplyisgood(IOI2CRequest *request, bool hasSize, UInt8 sendAddress, UInt8 *replyBuffer, int expectedSize);
 long parsevcp(int level, char *vcps, IOI2CConnectRef i2cconnect, int val_IOI2CTransactionTypes);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif

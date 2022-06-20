@@ -7,14 +7,24 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		6301374827870B760057A110 /* DisplayServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6301374727870B760057A110 /* DisplayServices.framework */; };
-		6330A9CF27C14BEB009D9063 /* oui.c in Sources */ = {isa = PBXBuildFile; fileRef = 6330A9CE27C14BEB009D9063 /* oui.c */; };
-		6330A9D227C14E2C009D9063 /* dpcd.c in Sources */ = {isa = PBXBuildFile; fileRef = 6330A9D127C14E2C009D9063 /* dpcd.c */; };
-		6330A9D527C1529F009D9063 /* printf.c in Sources */ = {isa = PBXBuildFile; fileRef = 6330A9D427C1529F009D9063 /* printf.c */; };
-		6330A9D727C15C05009D9063 /* vcp.c in Sources */ = {isa = PBXBuildFile; fileRef = 6330A9D627C15C05009D9063 /* vcp.c */; };
-		6330A9DA27C15F7A009D9063 /* utilities.c in Sources */ = {isa = PBXBuildFile; fileRef = 6330A9D927C15F7A009D9063 /* utilities.c */; };
-		634BF7F92786A0270021CD83 /* SkyLight.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 634BF7F82786A0270021CD83 /* SkyLight.framework */; };
-		637AD5F42804621700F86799 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 637AD5F32804621700F86799 /* main.m */; };
+		63274259284C64DC0037716C /* AGDCDiagnose.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 63274258284C64DB0037716C /* AGDCDiagnose.cpp */; };
+		6327426E284F123C0037716C /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6327426C284F12230037716C /* CoreFoundation.framework */; };
+		6327426F284F123F0037716C /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6327426D284F12230037716C /* CoreGraphics.framework */; };
+		63274271284F126F0037716C /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 63274270284F125C0037716C /* IOKit.framework */; };
+		63274273284F129B0037716C /* CoreDisplay.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 63274272284F12950037716C /* CoreDisplay.framework */; };
+		63274275284F14550037716C /* DisplayServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 63274274284F14540037716C /* DisplayServices.framework */; };
+		63274277284F14650037716C /* SkyLight.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 63274276284F14650037716C /* SkyLight.framework */; };
+		6327427F284F16530037716C /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6327427E284F16320037716C /* ApplicationServices.framework */; };
+		6330A9CF27C14BEB009D9063 /* oui.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6330A9CE27C14BEB009D9063 /* oui.cpp */; };
+		6330A9D227C14E2C009D9063 /* dpcd.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6330A9D127C14E2C009D9063 /* dpcd.cpp */; };
+		6330A9D527C1529F009D9063 /* printf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6330A9D427C1529F009D9063 /* printf.cpp */; };
+		6330A9DA27C15F7A009D9063 /* utilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6330A9D927C15F7A009D9063 /* utilities.cpp */; };
+		63400FBF2852BDD3000C1A01 /* iogdiagnose.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 63400FBE2852BDB1000C1A01 /* iogdiagnose.cpp */; };
+		63400FC02852BDE8000C1A01 /* IOGDiagnoseUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 63400FBA2852BDB1000C1A01 /* IOGDiagnoseUtils.cpp */; };
+		63400FCB2852CB15000C1A01 /* vcp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 63400FCA2852CB15000C1A01 /* vcp.cpp */; };
+		63576DC72837941700FF5764 /* displayport.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 63576DC62837941700FF5764 /* displayport.cpp */; };
+		637AD5F42804621700F86799 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 637AD5F32804621700F86799 /* main.cpp */; };
+		63A1AC90283641AE00A17E9D /* iofbdebuguser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 63A1AC8E283641AE00A17E9D /* iofbdebuguser.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -30,17 +40,52 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		6301374727870B760057A110 /* DisplayServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DisplayServices.framework; path = ../../../../../../../../../System/Library/PrivateFrameworks/DisplayServices.framework; sourceTree = "<group>"; };
+		6311E6EC2856F8F6007B8263 /* IOPM.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOPM.h; sourceTree = "<group>"; };
+		6311E6ED2856F8F6007B8263 /* IOPMLib.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOPMLib.h; sourceTree = "<group>"; };
+		6311E6EE2856F8F6007B8263 /* IOPMKeys.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOPMKeys.h; sourceTree = "<group>"; };
+		6311E6EF2856F8F6007B8263 /* IOPMLibDefs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOPMLibDefs.h; sourceTree = "<group>"; };
+		6311E6F128586BE0007B8263 /* pexpert.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = pexpert.h; sourceTree = "<group>"; };
+		6311E6F32858752B007B8263 /* IOMessage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = IOMessage.h; path = Versions/A/Headers/IOMessage.h; sourceTree = "<group>"; };
+		63274257284C64DB0037716C /* AGDCDiagnose.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AGDCDiagnose.h; sourceTree = "<group>"; };
+		63274258284C64DB0037716C /* AGDCDiagnose.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AGDCDiagnose.cpp; sourceTree = "<group>"; };
+		6327425F284E642B0037716C /* kdebug_kernel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = kdebug_kernel.h; sourceTree = "<group>"; };
+		63274264284E70200037716C /* kdebug.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = kdebug.h; sourceTree = "<group>"; };
+		63274265284E71880037716C /* kdebug_private.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = kdebug_private.h; sourceTree = "<group>"; };
+		6327426C284F12230037716C /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = CoreFoundation.framework; sourceTree = "<group>"; };
+		6327426D284F12230037716C /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = CoreGraphics.framework; sourceTree = "<group>"; };
+		63274270284F125C0037716C /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = IOKit.framework; sourceTree = "<group>"; };
+		63274272284F12950037716C /* CoreDisplay.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = CoreDisplay.framework; sourceTree = "<group>"; };
+		63274274284F14540037716C /* DisplayServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = DisplayServices.framework; sourceTree = "<group>"; };
+		63274276284F14650037716C /* SkyLight.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SkyLight.framework; sourceTree = "<group>"; };
+		6327427E284F16320037716C /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ApplicationServices.framework; sourceTree = "<group>"; };
 		63295FFC2782F26C00E55E0D /* AllRez */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = AllRez; sourceTree = BUILT_PRODUCTS_DIR; };
 		6330A9CD27C14BEB009D9063 /* oui.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = oui.h; sourceTree = "<group>"; };
-		6330A9CE27C14BEB009D9063 /* oui.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = oui.c; sourceTree = "<group>"; };
+		6330A9CE27C14BEB009D9063 /* oui.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = oui.cpp; sourceTree = "<group>"; };
 		6330A9D027C14E2B009D9063 /* dpcd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dpcd.h; sourceTree = "<group>"; };
-		6330A9D127C14E2C009D9063 /* dpcd.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = dpcd.c; sourceTree = "<group>"; };
+		6330A9D127C14E2C009D9063 /* dpcd.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = dpcd.cpp; sourceTree = "<group>"; };
 		6330A9D327C15244009D9063 /* printf.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = printf.h; sourceTree = "<group>"; };
-		6330A9D427C1529F009D9063 /* printf.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = printf.c; sourceTree = "<group>"; };
-		6330A9D627C15C05009D9063 /* vcp.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = vcp.c; sourceTree = "<group>"; };
+		6330A9D427C1529F009D9063 /* printf.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = printf.cpp; sourceTree = "<group>"; };
 		6330A9D827C15F79009D9063 /* utilities.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utilities.h; sourceTree = "<group>"; };
-		6330A9D927C15F7A009D9063 /* utilities.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = utilities.c; sourceTree = "<group>"; };
+		6330A9D927C15F7A009D9063 /* utilities.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = utilities.cpp; sourceTree = "<group>"; };
+		633856442848265100362C07 /* IOMacOSTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOMacOSTypes.h; sourceTree = "<group>"; };
+		633856452848265100362C07 /* IONDRVLibraries.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IONDRVLibraries.h; sourceTree = "<group>"; };
+		633856462848265100362C07 /* IONDRVFramebuffer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IONDRVFramebuffer.h; sourceTree = "<group>"; };
+		633856472848265100362C07 /* IOMacOSVideo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOMacOSVideo.h; sourceTree = "<group>"; };
+		633856482848265100362C07 /* IONDRVSupport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IONDRVSupport.h; sourceTree = "<group>"; };
+		63385649284826AF00362C07 /* IOMacOSVideo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOMacOSVideo.h; sourceTree = "<group>"; };
+		6338564A284826AF00362C07 /* IOMacOSTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOMacOSTypes.h; sourceTree = "<group>"; };
+		6338564C2848271F00362C07 /* IOGraphicsDevice.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOGraphicsDevice.h; sourceTree = "<group>"; };
+		63400FB22852BDB1000C1A01 /* IOGraphicsDiagnose.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOGraphicsDiagnose.h; sourceTree = "<group>"; };
+		63400FB32852BDB1000C1A01 /* IOGraphicsKTrace.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOGraphicsKTrace.h; sourceTree = "<group>"; };
+		63400FB62852BDB1000C1A01 /* GTraceTypes.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = GTraceTypes.hpp; sourceTree = "<group>"; };
+		63400FB72852BDB1000C1A01 /* IOGraphicsTypesPrivate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOGraphicsTypesPrivate.h; sourceTree = "<group>"; };
+		63400FBA2852BDB1000C1A01 /* IOGDiagnoseUtils.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = IOGDiagnoseUtils.cpp; sourceTree = "<group>"; };
+		63400FBB2852BDB1000C1A01 /* IOGDiagnoseUtils.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = IOGDiagnoseUtils.hpp; sourceTree = "<group>"; };
+		63400FBC2852BDB1000C1A01 /* iokit */ = {isa = PBXFileReference; lastKnownFileType = text; path = iokit; sourceTree = "<group>"; };
+		63400FBE2852BDB1000C1A01 /* iogdiagnose.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = iogdiagnose.cpp; sourceTree = "<group>"; };
+		63400FC82852C8E4000C1A01 /* kdebug_kernel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = kdebug_kernel.h; sourceTree = "<group>"; };
+		63400FC92852C8E4000C1A01 /* kdebug_private.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = kdebug_private.h; sourceTree = "<group>"; };
+		63400FCA2852CB15000C1A01 /* vcp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vcp.cpp; sourceTree = "<group>"; };
 		6340D0462795659D00A27077 /* IOGraphicsEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOGraphicsEngine.h; sourceTree = "<group>"; };
 		6340D0472795659D00A27077 /* IOAccelSurfaceConnect.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOAccelSurfaceConnect.h; sourceTree = "<group>"; };
 		6340D0482795659D00A27077 /* IOGraphicsInterface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOGraphicsInterface.h; sourceTree = "<group>"; };
@@ -51,26 +96,21 @@
 		6340D04D2795659D00A27077 /* IOGraphicsInterfaceTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOGraphicsInterfaceTypes.h; sourceTree = "<group>"; };
 		6340D04E2795659D00A27077 /* IOAccelClientConnect.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOAccelClientConnect.h; sourceTree = "<group>"; };
 		6340D050279565BD00A27077 /* IOI2CInterface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOI2CInterface.h; sourceTree = "<group>"; };
-		6340D0522795661500A27077 /* IOMacOSTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOMacOSTypes.h; sourceTree = "<group>"; };
-		6340D0532795661500A27077 /* IONDRVLibraries.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IONDRVLibraries.h; sourceTree = "<group>"; };
-		6340D0542795661500A27077 /* IONDRVFramebuffer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IONDRVFramebuffer.h; sourceTree = "<group>"; };
-		6340D0552795661500A27077 /* IOMacOSVideo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOMacOSVideo.h; sourceTree = "<group>"; };
-		6340D0562795661500A27077 /* IONDRVSupport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IONDRVSupport.h; sourceTree = "<group>"; };
-		6340D0BB279567C300A27077 /* CGDisplayConfiguration.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CGDisplayConfiguration.h; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/CoreGraphics.framework/Versions/A/Headers/CGDisplayConfiguration.h; sourceTree = DEVELOPER_DIR; };
-		6340D0BC279567C300A27077 /* CGDirectDisplay.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CGDirectDisplay.h; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/CoreGraphics.framework/Versions/A/Headers/CGDirectDisplay.h; sourceTree = DEVELOPER_DIR; };
+		6340D0BB279567C300A27077 /* CGDisplayConfiguration.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CGDisplayConfiguration.h; path = Versions/A/Headers/CGDisplayConfiguration.h; sourceTree = "<group>"; };
+		6340D0BC279567C300A27077 /* CGDirectDisplay.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CGDirectDisplay.h; path = Versions/A/Headers/CGDirectDisplay.h; sourceTree = "<group>"; };
 		6340D0BD27994D5200A27077 /* vcpcodes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vcpcodes.h; sourceTree = "<group>"; };
 		6340D0BE27994D5300A27077 /* ddccicommands.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ddccicommands.h; sourceTree = "<group>"; };
 		6340D0BF2799810F00A27077 /* vcp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vcp.h; sourceTree = "<group>"; };
-		634BF7F82786A0270021CD83 /* SkyLight.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SkyLight.framework; path = ../../../../../../../../../System/Library/PrivateFrameworks/SkyLight.framework; sourceTree = "<group>"; };
-		637AD5F32804621700F86799 /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		63D6691E28126444003F40CE /* IOFramebuffer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = IOFramebuffer.h; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/Kernel.framework/Versions/A/Headers/IOKit/graphics/IOFramebuffer.h; sourceTree = DEVELOPER_DIR; };
-		63D6691F28126465003F40CE /* IOGraphicsDevice.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = IOGraphicsDevice.h; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/Kernel.framework/Versions/A/Headers/IOKit/graphics/IOGraphicsDevice.h; sourceTree = DEVELOPER_DIR; };
-		63FC0D6A27A0075400E0A05E /* IOReturn.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = IOReturn.h; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/IOKit.framework/Versions/A/Headers/IOReturn.h; sourceTree = DEVELOPER_DIR; };
-		63FC0D6B27A0077F00E0A05E /* IOKitLib.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = IOKitLib.h; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/IOKit.framework/Versions/A/Headers/IOKitLib.h; sourceTree = DEVELOPER_DIR; };
-		63FC0D7127A5372900E0A05E /* drm_connector.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = drm_connector.h; sourceTree = "<group>"; };
-		63FC0D7227A5372900E0A05E /* drm_dp_helper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = drm_dp_helper.h; sourceTree = "<group>"; };
-		63FC0D7427A5372900E0A05E /* delay.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = delay.h; sourceTree = "<group>"; };
-		63FC0D7527A5372900E0A05E /* i2c.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = i2c.h; sourceTree = "<group>"; };
+		63576DC62837941700FF5764 /* displayport.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = displayport.cpp; sourceTree = "<group>"; };
+		63576DC82837947900FF5764 /* displayport.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = displayport.h; sourceTree = "<group>"; };
+		63594C112831D01B0085510F /* drm_dp_helper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = drm_dp_helper.h; sourceTree = "<group>"; };
+		637AD5F32804621700F86799 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		63A1AC8E283641AE00A17E9D /* iofbdebuguser.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = iofbdebuguser.cpp; sourceTree = "<group>"; };
+		63A1AC8F283641AE00A17E9D /* iofbdebuguser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = iofbdebuguser.h; sourceTree = "<group>"; };
+		63A1AC9128364B1700A17E9D /* AppleMisc.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppleMisc.h; sourceTree = "<group>"; };
+		63D6691E28126444003F40CE /* IOFramebuffer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOFramebuffer.h; sourceTree = "<group>"; };
+		63FC0D6A27A0075400E0A05E /* IOReturn.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = IOReturn.h; path = Versions/A/Headers/IOReturn.h; sourceTree = "<group>"; };
+		63FC0D6B27A0077F00E0A05E /* IOKitLib.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = IOKitLib.h; path = Versions/A/Headers/IOKitLib.h; sourceTree = "<group>"; };
 		63FC0D7627A5372900E0A05E /* types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
 		63FC0D7D27A994F200E0A05E /* dpcd_defs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dpcd_defs.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -80,14 +120,49 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				634BF7F92786A0270021CD83 /* SkyLight.framework in Frameworks */,
-				6301374827870B760057A110 /* DisplayServices.framework in Frameworks */,
+				6327427F284F16530037716C /* ApplicationServices.framework in Frameworks */,
+				63274273284F129B0037716C /* CoreDisplay.framework in Frameworks */,
+				6327426F284F123F0037716C /* CoreGraphics.framework in Frameworks */,
+				6327426E284F123C0037716C /* CoreFoundation.framework in Frameworks */,
+				63274275284F14550037716C /* DisplayServices.framework in Frameworks */,
+				63274271284F126F0037716C /* IOKit.framework in Frameworks */,
+				63274277284F14650037716C /* SkyLight.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		6311E6EB2856F8F6007B8263 /* pwr_mgt */ = {
+			isa = PBXGroup;
+			children = (
+				6311E6EC2856F8F6007B8263 /* IOPM.h */,
+				6311E6ED2856F8F6007B8263 /* IOPMLib.h */,
+				6311E6EE2856F8F6007B8263 /* IOPMKeys.h */,
+				6311E6EF2856F8F6007B8263 /* IOPMLibDefs.h */,
+			);
+			name = pwr_mgt;
+			path = Versions/A/Headers/pwr_mgt;
+			sourceTree = "<group>";
+		};
+		6311E6F228586C11007B8263 /* pexpert */ = {
+			isa = PBXGroup;
+			children = (
+				6311E6F128586BE0007B8263 /* pexpert.h */,
+			);
+			path = pexpert;
+			sourceTree = "<group>";
+		};
+		6327425E284E63FF0037716C /* sys */ = {
+			isa = PBXGroup;
+			children = (
+				6327425F284E642B0037716C /* kdebug_kernel.h */,
+				63274265284E71880037716C /* kdebug_private.h */,
+			);
+			name = sys;
+			path = Versions/A/Headers/sys;
+			sourceTree = "<group>";
+		};
 		63295FF32782F26C00E55E0D = {
 			isa = PBXGroup;
 			children = (
@@ -107,46 +182,236 @@
 		63295FFE2782F26C00E55E0D /* AllRez */ = {
 			isa = PBXGroup;
 			children = (
-				637AD5F32804621700F86799 /* main.m */,
+				637AD5F32804621700F86799 /* main.cpp */,
 				6340D0BE27994D5300A27077 /* ddccicommands.h */,
 				6340D0BD27994D5200A27077 /* vcpcodes.h */,
 				6340D0BF2799810F00A27077 /* vcp.h */,
-				6330A9D627C15C05009D9063 /* vcp.c */,
+				63400FCA2852CB15000C1A01 /* vcp.cpp */,
 				6330A9CD27C14BEB009D9063 /* oui.h */,
-				6330A9CE27C14BEB009D9063 /* oui.c */,
+				6330A9CE27C14BEB009D9063 /* oui.cpp */,
 				6330A9D027C14E2B009D9063 /* dpcd.h */,
-				6330A9D127C14E2C009D9063 /* dpcd.c */,
+				6330A9D127C14E2C009D9063 /* dpcd.cpp */,
 				6330A9D327C15244009D9063 /* printf.h */,
-				6330A9D427C1529F009D9063 /* printf.c */,
+				6330A9D427C1529F009D9063 /* printf.cpp */,
 				6330A9D827C15F79009D9063 /* utilities.h */,
-				6330A9D927C15F7A009D9063 /* utilities.c */,
-				634BF7F82786A0270021CD83 /* SkyLight.framework */,
-				6301374727870B760057A110 /* DisplayServices.framework */,
-				63FC0D6D27A5351B00E0A05E /* linux */,
-				6340D0B92795674F00A27077 /* CoreGraphics */,
-				6340D0BA2795677800A27077 /* IOKit */,
+				6330A9D927C15F7A009D9063 /* utilities.cpp */,
+				63A1AC8E283641AE00A17E9D /* iofbdebuguser.cpp */,
+				63A1AC8F283641AE00A17E9D /* iofbdebuguser.h */,
+				63A1AC9128364B1700A17E9D /* AppleMisc.h */,
+				63576DC82837947900FF5764 /* displayport.h */,
+				63576DC62837941700FF5764 /* displayport.cpp */,
+				63274257284C64DB0037716C /* AGDCDiagnose.h */,
+				63274258284C64DB0037716C /* AGDCDiagnose.cpp */,
+				63400FAC2852B6D6000C1A01 /* linux (from github) */,
+				63400FAB2852B687000C1A01 /* PrivateFrameworks (in macOS System Library) */,
+				63400FAA2852B65A000C1A01 /* Frameworks (in MacOSX.sdk) */,
+				63400FC62852C8E4000C1A01 /* Kernel.framework  (from MacOSX.sdk Framework) */,
+				63400FA72852B5D0000C1A01 /* usr (in MacOSX.sdk) */,
+				63400FAD2852B75D000C1A01 /* IOGraphics-593 (from github) */,
 			);
 			path = AllRez;
+			sourceTree = "<group>";
+		};
+		633856422848264900362C07 /* IOKit */ = {
+			isa = PBXGroup;
+			children = (
+				6338564B2848270F00362C07 /* graphics */,
+				633856432848265100362C07 /* ndrvsupport */,
+			);
+			name = IOKit;
+			path = Versions/A/Headers/IOKit;
+			sourceTree = "<group>";
+		};
+		633856432848265100362C07 /* ndrvsupport */ = {
+			isa = PBXGroup;
+			children = (
+				633856442848265100362C07 /* IOMacOSTypes.h */,
+				633856472848265100362C07 /* IOMacOSVideo.h */,
+				633856452848265100362C07 /* IONDRVLibraries.h */,
+				633856462848265100362C07 /* IONDRVFramebuffer.h */,
+				633856482848265100362C07 /* IONDRVSupport.h */,
+			);
+			path = ndrvsupport;
+			sourceTree = "<group>";
+		};
+		6338564B2848270F00362C07 /* graphics */ = {
+			isa = PBXGroup;
+			children = (
+				63D6691E28126444003F40CE /* IOFramebuffer.h */,
+				6338564C2848271F00362C07 /* IOGraphicsDevice.h */,
+			);
+			path = graphics;
+			sourceTree = "<group>";
+		};
+		63400FA72852B5D0000C1A01 /* usr (in MacOSX.sdk) */ = {
+			isa = PBXGroup;
+			children = (
+				63400FA82852B5EC000C1A01 /* include */,
+			);
+			name = "usr (in MacOSX.sdk)";
+			path = ../MacOSX.sdk/usr;
+			sourceTree = SDKROOT;
+		};
+		63400FA82852B5EC000C1A01 /* include */ = {
+			isa = PBXGroup;
+			children = (
+				6311E6F228586C11007B8263 /* pexpert */,
+				63400FA92852B5F4000C1A01 /* sys */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
+		63400FA92852B5F4000C1A01 /* sys */ = {
+			isa = PBXGroup;
+			children = (
+				63274264284E70200037716C /* kdebug.h */,
+			);
+			path = sys;
+			sourceTree = "<group>";
+		};
+		63400FAA2852B65A000C1A01 /* Frameworks (in MacOSX.sdk) */ = {
+			isa = PBXGroup;
+			children = (
+				6327427E284F16320037716C /* ApplicationServices.framework */,
+				63274272284F12950037716C /* CoreDisplay.framework */,
+				6327426C284F12230037716C /* CoreFoundation.framework */,
+				6327426D284F12230037716C /* CoreGraphics.framework */,
+				6340D0B92795674F00A27077 /* CoreGraphics.framework */,
+				63274270284F125C0037716C /* IOKit.framework */,
+				6340D0BA2795677800A27077 /* IOKit.framework */,
+				63400FAE2852B9B6000C1A01 /* Kernel.framework */,
+			);
+			name = "Frameworks (in MacOSX.sdk)";
+			path = ../MacOSX.sdk/System/Library/Frameworks;
+			sourceTree = SDKROOT;
+		};
+		63400FAB2852B687000C1A01 /* PrivateFrameworks (in macOS System Library) */ = {
+			isa = PBXGroup;
+			children = (
+				63274274284F14540037716C /* DisplayServices.framework */,
+				63274276284F14650037716C /* SkyLight.framework */,
+			);
+			name = "PrivateFrameworks (in macOS System Library)";
+			path = /System/Library/PrivateFrameworks;
+			sourceTree = "<absolute>";
+		};
+		63400FAC2852B6D6000C1A01 /* linux (from github) */ = {
+			isa = PBXGroup;
+			children = (
+				63FC0D7727A994F200E0A05E /* drivers */,
+				63FC0D6F27A5372900E0A05E /* include */,
+			);
+			name = "linux (from github)";
+			path = linux;
+			sourceTree = "<group>";
+		};
+		63400FAD2852B75D000C1A01 /* IOGraphics-593 (from github) */ = {
+			isa = PBXGroup;
+			children = (
+				63400FBD2852BDB1000C1A01 /* iogdiagnose */,
+				63400FB12852BDB1000C1A01 /* IOGraphicsFamily */,
+			);
+			name = "IOGraphics-593 (from github)";
+			path = IOGraphics;
+			sourceTree = "<group>";
+		};
+		63400FAE2852B9B6000C1A01 /* Kernel.framework */ = {
+			isa = PBXGroup;
+			children = (
+				633856422848264900362C07 /* IOKit */,
+				6327425E284E63FF0037716C /* sys */,
+			);
+			path = Kernel.framework;
+			sourceTree = "<group>";
+		};
+		63400FB12852BDB1000C1A01 /* IOGraphicsFamily */ = {
+			isa = PBXGroup;
+			children = (
+				63400FB22852BDB1000C1A01 /* IOGraphicsDiagnose.h */,
+				63400FB32852BDB1000C1A01 /* IOGraphicsKTrace.h */,
+				63400FB42852BDB1000C1A01 /* IOKit */,
+				63400FB82852BDB1000C1A01 /* tools */,
+			);
+			path = IOGraphicsFamily;
+			sourceTree = "<group>";
+		};
+		63400FB42852BDB1000C1A01 /* IOKit */ = {
+			isa = PBXGroup;
+			children = (
+				63400FB52852BDB1000C1A01 /* graphics */,
+			);
+			path = IOKit;
+			sourceTree = "<group>";
+		};
+		63400FB52852BDB1000C1A01 /* graphics */ = {
+			isa = PBXGroup;
+			children = (
+				63400FB62852BDB1000C1A01 /* GTraceTypes.hpp */,
+				63400FB72852BDB1000C1A01 /* IOGraphicsTypesPrivate.h */,
+			);
+			path = graphics;
+			sourceTree = "<group>";
+		};
+		63400FB82852BDB1000C1A01 /* tools */ = {
+			isa = PBXGroup;
+			children = (
+				63400FB92852BDB1000C1A01 /* Utilities */,
+			);
+			path = tools;
+			sourceTree = "<group>";
+		};
+		63400FB92852BDB1000C1A01 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				63400FBA2852BDB1000C1A01 /* IOGDiagnoseUtils.cpp */,
+				63400FBB2852BDB1000C1A01 /* IOGDiagnoseUtils.hpp */,
+				63400FBC2852BDB1000C1A01 /* iokit */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		63400FBD2852BDB1000C1A01 /* iogdiagnose */ = {
+			isa = PBXGroup;
+			children = (
+				63400FBE2852BDB1000C1A01 /* iogdiagnose.cpp */,
+			);
+			path = iogdiagnose;
+			sourceTree = "<group>";
+		};
+		63400FC62852C8E4000C1A01 /* Kernel.framework  (from MacOSX.sdk Framework) */ = {
+			isa = PBXGroup;
+			children = (
+				63400FC72852C8E4000C1A01 /* sys */,
+			);
+			name = "Kernel.framework  (from MacOSX.sdk Framework)";
+			path = Kernel.framework;
+			sourceTree = "<group>";
+		};
+		63400FC72852C8E4000C1A01 /* sys */ = {
+			isa = PBXGroup;
+			children = (
+				63400FC82852C8E4000C1A01 /* kdebug_kernel.h */,
+				63400FC92852C8E4000C1A01 /* kdebug_private.h */,
+			);
+			path = sys;
 			sourceTree = "<group>";
 		};
 		6340D0452795659D00A27077 /* graphics */ = {
 			isa = PBXGroup;
 			children = (
-				6340D0462795659D00A27077 /* IOGraphicsEngine.h */,
-				6340D0472795659D00A27077 /* IOAccelSurfaceConnect.h */,
-				6340D0482795659D00A27077 /* IOGraphicsInterface.h */,
-				6340D0492795659D00A27077 /* IOGraphicsTypes.h */,
-				63D6691E28126444003F40CE /* IOFramebuffer.h */,
-				6340D04A2795659D00A27077 /* IOFramebufferShared.h */,
-				63D6691F28126465003F40CE /* IOGraphicsDevice.h */,
-				6340D04B2795659D00A27077 /* IOGraphicsLib.h */,
-				6340D04C2795659D00A27077 /* IOAccelTypes.h */,
-				6340D04D2795659D00A27077 /* IOGraphicsInterfaceTypes.h */,
 				6340D04E2795659D00A27077 /* IOAccelClientConnect.h */,
+				6340D0472795659D00A27077 /* IOAccelSurfaceConnect.h */,
+				6340D04C2795659D00A27077 /* IOAccelTypes.h */,
+				6340D04A2795659D00A27077 /* IOFramebufferShared.h */,
+				6340D0462795659D00A27077 /* IOGraphicsEngine.h */,
+				6340D0482795659D00A27077 /* IOGraphicsInterface.h */,
+				6340D04D2795659D00A27077 /* IOGraphicsInterfaceTypes.h */,
+				6340D04B2795659D00A27077 /* IOGraphicsLib.h */,
+				6340D0492795659D00A27077 /* IOGraphicsTypes.h */,
 			);
 			name = graphics;
-			path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/IOKit.framework/Versions/A/Headers/graphics;
-			sourceTree = DEVELOPER_DIR;
+			path = Versions/A/Headers/graphics;
+			sourceTree = "<group>";
 		};
 		6340D04F279565BD00A27077 /* i2c */ = {
 			isa = PBXGroup;
@@ -154,50 +419,48 @@
 				6340D050279565BD00A27077 /* IOI2CInterface.h */,
 			);
 			name = i2c;
-			path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/IOKit.framework/Versions/A/Headers/i2c;
-			sourceTree = DEVELOPER_DIR;
+			path = Versions/A/Headers/i2c;
+			sourceTree = "<group>";
 		};
 		6340D0512795661500A27077 /* ndrvsupport */ = {
 			isa = PBXGroup;
 			children = (
-				6340D0522795661500A27077 /* IOMacOSTypes.h */,
-				6340D0532795661500A27077 /* IONDRVLibraries.h */,
-				6340D0542795661500A27077 /* IONDRVFramebuffer.h */,
-				6340D0552795661500A27077 /* IOMacOSVideo.h */,
-				6340D0562795661500A27077 /* IONDRVSupport.h */,
+				6338564A284826AF00362C07 /* IOMacOSTypes.h */,
+				63385649284826AF00362C07 /* IOMacOSVideo.h */,
 			);
 			name = ndrvsupport;
-			path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/Kernel.framework/Versions/A/Headers/IOKit/ndrvsupport;
-			sourceTree = DEVELOPER_DIR;
+			path = Versions/A/Headers/ndrvsupport;
+			sourceTree = "<group>";
 		};
-		6340D0B92795674F00A27077 /* CoreGraphics */ = {
+		6340D0B92795674F00A27077 /* CoreGraphics.framework */ = {
 			isa = PBXGroup;
 			children = (
 				6340D0BC279567C300A27077 /* CGDirectDisplay.h */,
 				6340D0BB279567C300A27077 /* CGDisplayConfiguration.h */,
 			);
-			name = CoreGraphics;
+			path = CoreGraphics.framework;
 			sourceTree = "<group>";
 		};
-		6340D0BA2795677800A27077 /* IOKit */ = {
+		6340D0BA2795677800A27077 /* IOKit.framework */ = {
 			isa = PBXGroup;
 			children = (
 				63FC0D6B27A0077F00E0A05E /* IOKitLib.h */,
+				6311E6F32858752B007B8263 /* IOMessage.h */,
 				63FC0D6A27A0075400E0A05E /* IOReturn.h */,
 				6340D0512795661500A27077 /* ndrvsupport */,
 				6340D0452795659D00A27077 /* graphics */,
 				6340D04F279565BD00A27077 /* i2c */,
+				6311E6EB2856F8F6007B8263 /* pwr_mgt */,
 			);
-			name = IOKit;
+			path = IOKit.framework;
 			sourceTree = "<group>";
 		};
-		63FC0D6D27A5351B00E0A05E /* linux */ = {
+		63594C102831D01B0085510F /* display */ = {
 			isa = PBXGroup;
 			children = (
-				63FC0D7727A994F200E0A05E /* drivers */,
-				63FC0D6F27A5372900E0A05E /* include */,
+				63594C112831D01B0085510F /* drm_dp_helper.h */,
 			);
-			path = linux;
+			path = display;
 			sourceTree = "<group>";
 		};
 		63FC0D6F27A5372900E0A05E /* include */ = {
@@ -212,8 +475,7 @@
 		63FC0D7027A5372900E0A05E /* drm */ = {
 			isa = PBXGroup;
 			children = (
-				63FC0D7127A5372900E0A05E /* drm_connector.h */,
-				63FC0D7227A5372900E0A05E /* drm_dp_helper.h */,
+				63594C102831D01B0085510F /* display */,
 			);
 			path = drm;
 			sourceTree = "<group>";
@@ -221,8 +483,6 @@
 		63FC0D7327A5372900E0A05E /* linux */ = {
 			isa = PBXGroup;
 			children = (
-				63FC0D7427A5372900E0A05E /* delay.h */,
-				63FC0D7527A5372900E0A05E /* i2c.h */,
 				63FC0D7627A5372900E0A05E /* types.h */,
 			);
 			path = linux;
@@ -333,12 +593,17 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6330A9DA27C15F7A009D9063 /* utilities.c in Sources */,
-				6330A9D527C1529F009D9063 /* printf.c in Sources */,
-				6330A9D227C14E2C009D9063 /* dpcd.c in Sources */,
-				6330A9D727C15C05009D9063 /* vcp.c in Sources */,
-				637AD5F42804621700F86799 /* main.m in Sources */,
-				6330A9CF27C14BEB009D9063 /* oui.c in Sources */,
+				63A1AC90283641AE00A17E9D /* iofbdebuguser.cpp in Sources */,
+				6330A9DA27C15F7A009D9063 /* utilities.cpp in Sources */,
+				63400FCB2852CB15000C1A01 /* vcp.cpp in Sources */,
+				6330A9D527C1529F009D9063 /* printf.cpp in Sources */,
+				6330A9D227C14E2C009D9063 /* dpcd.cpp in Sources */,
+				63400FC02852BDE8000C1A01 /* IOGDiagnoseUtils.cpp in Sources */,
+				63576DC72837941700FF5764 /* displayport.cpp in Sources */,
+				63400FBF2852BDD3000C1A01 /* iogdiagnose.cpp in Sources */,
+				637AD5F42804621700F86799 /* main.cpp in Sources */,
+				6330A9CF27C14BEB009D9063 /* oui.cpp in Sources */,
+				63274259284C64DC0037716C /* AGDCDiagnose.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -401,10 +666,18 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = "";
 				SDKROOT = macosx;
 				SYSTEM_FRAMEWORK_SEARCH_PATHS = "";
-				SYSTEM_HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/include/";
-				USER_HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/drivers/gpu/drm/amd/display/**";
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					"${SRCROOT}/AllRez/linux/include/",
+					"${SRCROOT}/AllRez/Kernel.framework/",
+				);
+				USER_HEADER_SEARCH_PATHS = (
+					"${SRCROOT}/AllRez/linux/drivers/gpu/drm/amd/display/**",
+					"${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily/tools/Utilities",
+					"${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily",
+				);
 			};
 			name = Debug;
 		};
@@ -457,10 +730,18 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				OTHER_CFLAGS = "";
 				SDKROOT = macosx;
 				SYSTEM_FRAMEWORK_SEARCH_PATHS = "";
-				SYSTEM_HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/include/";
-				USER_HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/drivers/gpu/drm/amd/display/**";
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					"${SRCROOT}/AllRez/linux/include/",
+					"${SRCROOT}/AllRez/Kernel.framework/",
+				);
+				USER_HEADER_SEARCH_PATHS = (
+					"${SRCROOT}/AllRez/linux/drivers/gpu/drm/amd/display/**",
+					"${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily/tools/Utilities",
+					"${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily",
+				);
 			};
 			name = Release;
 		};
@@ -468,6 +749,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/AllRez",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SYSTEM_FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -480,6 +765,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/AllRez",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SYSTEM_FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",

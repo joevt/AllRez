@@ -17,7 +17,7 @@ for thetype in oui cid; do
 done > "ouilist.h"
 */
 
-char* convertoui(int oui) {
+const char* convertoui(int oui) {
 	#define oneoui(val, name) case 0x ## val: return name;
 	switch(oui) {
 		#include "ouilist.h"
