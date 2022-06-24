@@ -578,8 +578,7 @@ const char *GetClamshellStateStr(char *buf, int bufsize, uint64_t val) {
 const char *GetPMStr(char *buf, int bufsize, uint64_t val) {
 	const char *str = buf;
 	char stateStr[20];
-	int inc = snprintf(buf, bufsize, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
-		GetWSAAStateStr(stateStr, sizeof(stateStr), val & kIOWSAA_StateMask),
+	int inc = snprintf(buf, bufsize, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
 		val & kIOPMSleepNow             ? "SleepNow," : "",
 		val & kIOPMAllowSleep           ? "AllowSleep," : "",
 		val & kIOPMPreventSleep         ? "PreventSleep," : "",
@@ -1403,7 +1402,7 @@ void dumpTokenBuffer(FILE* outfile, const vector<GTraceBuffer>& gtraces)
 					default             : typeStr = typebuf; snprintf(typebuf, sizeof(typebuf), "?%d", GUNPACKFUNCTYPE(entry.tag()));
 				}
 
-				iprintf("timestamp:%20llu=%s line:%-5u component:%#llx cpu:%u thread:%#-8x regid:%#x %s%s ",
+				iprintf("timestamp:%20llu=%s line:%-5u component:%#llx cpu:%-2u thread:%#-8x regid:%#x %s%s ",
 						entry.timestamp(), thenstr, entry.line(), entry.component(),
 						entry.cpu(), entry.threadID(), entry.registryID(),
 						typeStr, tagStr
@@ -1428,7 +1427,7 @@ void dumpTokenBuffer(FILE* outfile, const vector<GTraceBuffer>& gtraces)
 #define GTRACEARG_srcnamed(_name)               do { tagzero; src = entry.arg64(arg); cprintf("%s:%s", _name, GetGTraceSourceStr(buf, sizeof(buf), src)); arg++; } while (0)
 #define GTRACEARG_regIDnamed(_name)             do { tagzero; cprintf("%s:%#llx"                       , _name, entry.arg64(arg)); arg++; } while (0)
 #define GTRACEARG_units(_name, _units)          do { tagzero; cprintf("%s:%lld%s"                      , _name, entry.arg64(arg), _units); arg++; } while (0)
-#define GTRACEARG_bool(_name)                   do { tagzero; cprintf("%s:%s%s"                        , _name, entry.arg64(arg) & ~1 ? "?" : "", entry.arg64(arg) == 1 ? "true" : entry.arg64(arg) == 0 ? "false" : UNKNOWN_VALUE(entry.arg64(arg))); arg++; } while (0)
+#define GTRACEARG_bool(_name)                   do { tagzero; cprintf("%s:%s"                          , _name, entry.arg64(arg) == 1 ? "true" : entry.arg64(arg) == 0 ? "false" : UNKNOWN_VALUE(entry.arg64(arg))); arg++; } while (0)
 #define GTRACEARG_int(_name)                    do { tagzero; cprintf("%s:%lld"                        , _name, entry.arg64(arg)); arg++; } while (0)
 #define GTRACEARG_hex(_name)                    do { tagzero; cprintf("%s:%#llx"                       , _name, entry.arg64(arg)); arg++; } while (0)
 #define GTRACEARG_minus1(_name)                 do { tagzero; cprintf("%s:%s%s"                        , _name, entry.arg64(arg) != -1 ? "?" : "", entry.arg64(arg) == -1 ? "-1" : UNKNOWN_VALUE(entry.arg64(arg))); arg++; } while (0)
@@ -1588,7 +1587,7 @@ void dumpTokenBuffer(FILE* outfile, const vector<GTraceBuffer>& gtraces)
 					case DBG_IOG_CONNECT_CHANGE_INTERRUPT    : GTRACEARG_regID; GTRACEARG_last_processed; GTRACEARG_last_finished_and_messaged; GTRACEARG_changed_and_last_forced; break; // these are all related: fConnectChange lastProcessedChange fLastFinishedChange fLastMessagedChange fLastForceRetrain connectChange fPostWakeChange lastMessagedChange
 					case DBG_IOG_DELIVER_NOTIFY              : GTRACEARG_regID; GTRACEARG_event; GTRACEARG_return_code; break; // __private->regID, event, ret, 0
 					case DBG_IOG_AGC_MSG                     : GTRACEARG_switchState; break; // switchState, 0, 0, 0
-					case DBG_IOG_AGC_MUTE                    : GTRACEARG_regID; value = entry.arg64(arg); DumpOneAttribute(kConnectionIgnore, true, true, &value, sizeof(value)); GTRACEARG_bool("isMuted"); break; // GPACKUINT64T(__private->regID), GPACKUINT32T(0, value), GPACKBIT(0, __private->controller->isMuted()), 0
+					case DBG_IOG_AGC_MUTE                    : GTRACEARG_regID; value = entry.arg64(arg); cprintf(" {"); DumpOneAttribute(kConnectionIgnore, true, true, &value, sizeof(value)); cprintf(" }"); GTRACEARG_bool("isMuted"); break; // GPACKUINT64T(__private->regID), GPACKUINT32T(0, value), GPACKBIT(0, __private->controller->isMuted()), 0
 					case DBG_IOG_SET_PROPERTIES              : GTRACEARG_regID; GTRACEARG_string("?", 24); break; // DBG_IOG_SET_PROPERTIES, r14, 0x2000, var_50, 0x2000, var_48, 0x2000, var_40
 					case DBG_IOG_SET_SYSTEM_DIM_STATE_52     : break; // sign_extend_64(r12), r14 >> 0x1f | (r13 != 0x0 ? 0x1 : 0x0) << 0x8 | r13 << 0x30 | rbx | rcx << 0x20, 0x0, 0x0
 					case DBG_IOG_DIMENGINE_53                : break;
@@ -1650,7 +1649,13 @@ void dumpTokenBuffer(FILE* outfile, const vector<GTraceBuffer>& gtraces)
 							if (i > 0 && entry.fArgsTag.tag(i)) {
 								cprintf("%s:", GetTagTypeStr(tagtypebuf, sizeof(tagtypebuf), entry.fArgsTag.tag(i)));
 							}
-							cprintf("%#llx", entry.arg64(i));
+							for (j = i; j > 0 && j < 4 && entry.fArgsTag.tag(j) == kGTRACE_ARGUMENT_STRING; j++);
+							if (j > i) {
+								cprintf("%s", GetEntryString(buf, sizeof(buf), entry, i, (j-i)*8));
+								i = j - 1;
+							}
+							else
+								cprintf("%#llx", entry.arg64(i));
 							break;
 						}
 					}
@@ -2000,19 +2005,7 @@ int iogdiagnose(int dumpToFile, char *optarg)
 {
 	bool                 bDumpToFile = false;
     bool                 bBinaryToFile = false;
-#if 0
-	int                  flagInd = 0;
-    int                  flag = 0;
-#endif
 	char                 inputFilename[256] = { 0 };
-#if 0
-	static struct option opts[] = {
-        "file",   optional_argument,  nullptr, 'f',
-        "binary", required_argument,  nullptr, 'b',
-        nullptr,  no_argument,        nullptr,  0 ,
-    };
-    const char*          argKeys = "fb:";
-#endif
 
 #if 0
 	testtime();
@@ -2027,11 +2020,6 @@ int iogdiagnose(int dumpToFile, char *optarg)
 		}
 	}
 
-    auto reportFailure = [](const char *error, const kern_return_t err) {
-        fprintf(stderr, "%s %s (%#x)\n", error, mach_error_string(err), err);
-        exit(EXIT_FAILURE);
-    };
-
     const char *error = nullptr;
     kern_return_t err = kIOReturnSuccess;
 
@@ -2043,12 +2031,14 @@ int iogdiagnose(int dumpToFile, char *optarg)
             error = "A problem occured fetching gTraces, see kernel logs";
             err = fetchGTraceBuffers(gtrace, &gtraces);
         }
-        if (err)
-            reportFailure(error, err);
+		if (err) {
+			fprintf(stderr, "%s %s (%#x)\n", error, mach_error_string(err), err);
+			return(EXIT_FAILURE);
+		}
     }
     if (bBinaryToFile) {
         writeGTraceBinary(gtraces, inputFilename);
-        exit(EXIT_SUCCESS);
+        return(EXIT_SUCCESS);
     }
 
     IOGDiagnose report = { 0 };
@@ -2057,12 +2047,13 @@ int iogdiagnose(int dumpToFile, char *optarg)
         err = openDiagnostics(&diag, &error);
         if (!err)
             err = iogDiagnose(diag, &report, sizeof(report), &error);
-        if (err)
-            reportFailure(error, err);
+		if (err) {
+			fprintf(stderr, "%s %s (%#x)\n", error, mach_error_string(err), err);
+			return(EXIT_FAILURE);
+		}
     }
 
     dumpGTraceReport(report, gtraces, bDumpToFile);
-		
     return EXIT_SUCCESS;
 }
 
