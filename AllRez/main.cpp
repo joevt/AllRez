@@ -39,6 +39,7 @@ extern "C" {
 #include <IOKit/i2c/IOI2CInterface.h>
 
 extern int iogdiagnose(int dumpToFile, const char *optarg);
+extern int iogdiagnose6(int dumpToFile, const char *optarg);
 
 #ifdef __cplusplus
 }
@@ -4596,12 +4597,14 @@ int main(int argc, const char * argv[]) {
 		}
 #endif
 	
-		iprintf("iogdiagnose = {\n"); INDENT
-		
-		iogdiagnose(false, NULL);
+		iprintf("iogdiagnose old = {\n"); INDENT
+		iogdiagnose6(false, NULL);
+		OUTDENT iprintf("} // iogdiagnose old\n");
 
-		OUTDENT iprintf("} // iogdiagnose\n");
-		
+		iprintf("iogdiagnose new = {\n"); INDENT
+		iogdiagnose(false, NULL);
+		OUTDENT iprintf("} // iogdiagnose new\n");
+	
 	//	} // @autoreleasepool
 	return 0;
 } // main

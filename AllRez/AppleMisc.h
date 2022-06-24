@@ -17,6 +17,17 @@
 #define min(x,y) (((x)<(y)) ? (x) : (y))
 
 
+// https://github.com/apple-oss-distributions/IOGraphics/blob/IOGraphics-530.14/IOGraphicsFamily/IOKit/graphics/IOGraphicsTypes.h
+
+// 1071
+enum {
+	// connection types for IOServiceOpen
+//	kIOFBServerConnectType              = 0,
+//	kIOFBSharedConnectType              = 1,
+	kIOFBDiagnoseConnectType            = 2,
+};
+
+
 // https://github.com/apple-oss-distributions/IOGraphics/blob/main/IOGraphicsFamily/IOKit/graphics/IODisplay.h
 // 101
 enum {

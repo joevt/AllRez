@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6311E70928630614007B8263 /* iogdiagnose.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6311E70328630614007B8263 /* iogdiagnose.cpp */; };
+		6311E70A28630614007B8263 /* IOGDiagnoseUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6311E70528630614007B8263 /* IOGDiagnoseUtils.cpp */; };
 		63274259284C64DC0037716C /* AGDCDiagnose.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 63274258284C64DB0037716C /* AGDCDiagnose.cpp */; };
 		6327426E284F123C0037716C /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6327426C284F12230037716C /* CoreFoundation.framework */; };
 		6327426F284F123F0037716C /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6327426D284F12230037716C /* CoreGraphics.framework */; };
@@ -46,6 +48,11 @@
 		6311E6EF2856F8F6007B8263 /* IOPMLibDefs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOPMLibDefs.h; sourceTree = "<group>"; };
 		6311E6F128586BE0007B8263 /* pexpert.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = pexpert.h; sourceTree = "<group>"; };
 		6311E6F32858752B007B8263 /* IOMessage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = IOMessage.h; path = Versions/A/Headers/IOMessage.h; sourceTree = "<group>"; };
+		6311E70128630614007B8263 /* GTraceTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GTraceTypes.h; sourceTree = "<group>"; };
+		6311E70328630614007B8263 /* iogdiagnose.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = iogdiagnose.cpp; sourceTree = "<group>"; };
+		6311E70528630614007B8263 /* IOGDiagnoseUtils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IOGDiagnoseUtils.cpp; sourceTree = "<group>"; };
+		6311E70628630614007B8263 /* IOGDiagnoseUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IOGDiagnoseUtils.h; sourceTree = "<group>"; };
+		6311E70828630614007B8263 /* IOGraphicsDiagnose530.14.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IOGraphicsDiagnose530.14.h; sourceTree = "<group>"; };
 		63274257284C64DB0037716C /* AGDCDiagnose.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AGDCDiagnose.h; sourceTree = "<group>"; };
 		63274258284C64DB0037716C /* AGDCDiagnose.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AGDCDiagnose.cpp; sourceTree = "<group>"; };
 		6327425F284E642B0037716C /* kdebug_kernel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = kdebug_kernel.h; sourceTree = "<group>"; };
@@ -153,6 +160,51 @@
 			path = pexpert;
 			sourceTree = "<group>";
 		};
+		6311E6FF28630614007B8263 /* IOGraphics530.14 (from github) */ = {
+			isa = PBXGroup;
+			children = (
+				6311E70028630614007B8263 /* GTrace */,
+				6311E70228630614007B8263 /* iogdiagnose */,
+				6311E70728630614007B8263 /* IOGraphicsFamily */,
+			);
+			name = "IOGraphics530.14 (from github)";
+			path = IOGraphics530.14;
+			sourceTree = "<group>";
+		};
+		6311E70028630614007B8263 /* GTrace */ = {
+			isa = PBXGroup;
+			children = (
+				6311E70128630614007B8263 /* GTraceTypes.h */,
+			);
+			path = GTrace;
+			sourceTree = "<group>";
+		};
+		6311E70228630614007B8263 /* iogdiagnose */ = {
+			isa = PBXGroup;
+			children = (
+				6311E70328630614007B8263 /* iogdiagnose.cpp */,
+				6311E70428630614007B8263 /* IOGDiagnoseUtils */,
+			);
+			path = iogdiagnose;
+			sourceTree = "<group>";
+		};
+		6311E70428630614007B8263 /* IOGDiagnoseUtils */ = {
+			isa = PBXGroup;
+			children = (
+				6311E70528630614007B8263 /* IOGDiagnoseUtils.cpp */,
+				6311E70628630614007B8263 /* IOGDiagnoseUtils.h */,
+			);
+			path = IOGDiagnoseUtils;
+			sourceTree = "<group>";
+		};
+		6311E70728630614007B8263 /* IOGraphicsFamily */ = {
+			isa = PBXGroup;
+			children = (
+				6311E70828630614007B8263 /* IOGraphicsDiagnose530.14.h */,
+			);
+			path = IOGraphicsFamily;
+			sourceTree = "<group>";
+		};
 		6327425E284E63FF0037716C /* sys */ = {
 			isa = PBXGroup;
 			children = (
@@ -207,7 +259,8 @@
 				63400FAA2852B65A000C1A01 /* Frameworks (in MacOSX.sdk) */,
 				63400FC62852C8E4000C1A01 /* Kernel.framework  (from MacOSX.sdk Framework) */,
 				63400FA72852B5D0000C1A01 /* usr (in MacOSX.sdk) */,
-				63400FAD2852B75D000C1A01 /* IOGraphics-593 (from github) */,
+				63400FAD2852B75D000C1A01 /* IOGraphics (from github) */,
+				6311E6FF28630614007B8263 /* IOGraphics530.14 (from github) */,
 			);
 			path = AllRez;
 			sourceTree = "<group>";
@@ -305,13 +358,13 @@
 			path = linux;
 			sourceTree = "<group>";
 		};
-		63400FAD2852B75D000C1A01 /* IOGraphics-593 (from github) */ = {
+		63400FAD2852B75D000C1A01 /* IOGraphics (from github) */ = {
 			isa = PBXGroup;
 			children = (
 				63400FBD2852BDB1000C1A01 /* iogdiagnose */,
 				63400FB12852BDB1000C1A01 /* IOGraphicsFamily */,
 			);
-			name = "IOGraphics-593 (from github)";
+			name = "IOGraphics (from github)";
 			path = IOGraphics;
 			sourceTree = "<group>";
 		};
@@ -598,9 +651,11 @@
 				63400FCB2852CB15000C1A01 /* vcp.cpp in Sources */,
 				6330A9D527C1529F009D9063 /* printf.cpp in Sources */,
 				6330A9D227C14E2C009D9063 /* dpcd.cpp in Sources */,
+				6311E70928630614007B8263 /* iogdiagnose.cpp in Sources */,
 				63400FC02852BDE8000C1A01 /* IOGDiagnoseUtils.cpp in Sources */,
 				63576DC72837941700FF5764 /* displayport.cpp in Sources */,
 				63400FBF2852BDD3000C1A01 /* iogdiagnose.cpp in Sources */,
+				6311E70A28630614007B8263 /* IOGDiagnoseUtils.cpp in Sources */,
 				637AD5F42804621700F86799 /* main.cpp in Sources */,
 				6330A9CF27C14BEB009D9063 /* oui.cpp in Sources */,
 				63274259284C64DC0037716C /* AGDCDiagnose.cpp in Sources */,
@@ -675,8 +730,8 @@
 				);
 				USER_HEADER_SEARCH_PATHS = (
 					"${SRCROOT}/AllRez/linux/drivers/gpu/drm/amd/display/**",
-					"${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily/tools/Utilities",
 					"${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily",
+					"${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily/tools/Utilities",
 				);
 			};
 			name = Debug;
@@ -739,8 +794,8 @@
 				);
 				USER_HEADER_SEARCH_PATHS = (
 					"${SRCROOT}/AllRez/linux/drivers/gpu/drm/amd/display/**",
-					"${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily/tools/Utilities",
 					"${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily",
+					"${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily/tools/Utilities",
 				);
 			};
 			name = Release;
