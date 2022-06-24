@@ -53,6 +53,8 @@
 		6311E70528630614007B8263 /* IOGDiagnoseUtils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IOGDiagnoseUtils.cpp; sourceTree = "<group>"; };
 		6311E70628630614007B8263 /* IOGDiagnoseUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IOGDiagnoseUtils.h; sourceTree = "<group>"; };
 		6311E70828630614007B8263 /* IOGraphicsDiagnose530.14.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IOGraphicsDiagnose530.14.h; sourceTree = "<group>"; };
+		6311E70B2863F90A007B8263 /* drm_hdcp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = drm_hdcp.h; sourceTree = "<group>"; };
+		6311E70C2863F90A007B8263 /* drm_dp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = drm_dp.h; sourceTree = "<group>"; };
 		63274257284C64DB0037716C /* AGDCDiagnose.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AGDCDiagnose.h; sourceTree = "<group>"; };
 		63274258284C64DB0037716C /* AGDCDiagnose.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AGDCDiagnose.cpp; sourceTree = "<group>"; };
 		6327425F284E642B0037716C /* kdebug_kernel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = kdebug_kernel.h; sourceTree = "<group>"; };
@@ -511,6 +513,8 @@
 		63594C102831D01B0085510F /* display */ = {
 			isa = PBXGroup;
 			children = (
+				6311E70C2863F90A007B8263 /* drm_dp.h */,
+				6311E70B2863F90A007B8263 /* drm_hdcp.h */,
 				63594C112831D01B0085510F /* drm_dp_helper.h */,
 			);
 			path = display;
