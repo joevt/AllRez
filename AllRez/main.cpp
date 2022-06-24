@@ -3214,6 +3214,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 	{ // I2C
 		IOItemCount i2cInterfaceCount;
 		IOReturn result;
+		char resultStr[40];
 		result = IOFBGetI2CInterfaceCount(ioFramebufferService, &i2cInterfaceCount);
 		if (KERN_SUCCESS == result) {
 			iprintf("I2C Interfaces = {\n"); INDENT
@@ -3292,11 +3293,11 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 											lf;
 										}
 										else {
-											cprintf("(request error:%x)", request.result);
+											cprintf("(request %s)", DumpOneReturn(resultStr, sizeof(resultStr), request.result));
 										}
 									}
 									else {
-										cprintf("(IOI2CSendRequest error:%x)", result);
+										cprintf("(IOI2CSendRequest %s)", DumpOneReturn(resultStr, sizeof(resultStr), result));
 									}
 								} // for blockNdx
 								lf;
@@ -3338,10 +3339,10 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 
 											result = IOI2CSendRequest(i2cconnect, kNilOptions, &request);
 											if (result) {
-												cprintf("(segment IOI2CSendRequest error:%x)", result);
+												cprintf("(segment IOI2CSendRequest %s)", DumpOneReturn(resultStr, sizeof(resultStr), result));
 											}
 											if (request.result) {
-												cprintf("(segment request error:%x)", request.result);
+												cprintf("(segment request %s)", DumpOneReturn(resultStr, sizeof(resultStr), request.result));
 											}
 											usleep(kDelayEDDCPointerSegment);
 										}
@@ -3382,11 +3383,11 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 												}
 											}
 											else {
-												cprintf("(request error:%x)", request.result);
+												cprintf("(request %s)", DumpOneReturn(resultStr, sizeof(resultStr), request.result));
 											}
 										}
 										else {
-											cprintf("(IOI2CSendRequest error:%x)", result);
+											cprintf("(IOI2CSendRequest %s)", DumpOneReturn(resultStr, sizeof(resultStr), result));
 										}
 									} // for blockNdx
 									lf;
@@ -3480,11 +3481,11 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 												}
 											}
 											else {
-												cprintf("(request error:%x)", request.result);
+												cprintf("(request %s)", DumpOneReturn(resultStr, sizeof(resultStr), request.result));
 											}
 										}
 										else {
-											cprintf("(IOI2CSendRequest error:%x)", result);
+											cprintf("(IOI2CSendRequest %s)", DumpOneReturn(resultStr, sizeof(resultStr), result));
 										}
 
 									} // for blockNdx
@@ -3521,7 +3522,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 										result = IOI2CSendRequest(i2cconnect, kNilOptions, &request);
 										usleep(kDelayDDCIdentificationRequest);
 										if (result) {
-											iprintf("(IOI2CSendRequest error:%x)\n", result);
+											iprintf("(IOI2CSendRequest %s)\n", DumpOneReturn(resultStr, sizeof(resultStr), result));
 											break;
 										}
 										bzero(&request, sizeof(request));
@@ -3539,7 +3540,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 									usleep(kDelayDDCIdentificationReply);
 
 									if (result) {
-										iprintf("(IOI2CSendRequest error:%x)\n", result);
+										iprintf("(IOI2CSendRequest %s)\n", DumpOneReturn(resultStr, sizeof(resultStr), result));
 										break;
 									}
 
@@ -3581,7 +3582,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 										result = IOI2CSendRequest(i2cconnect, kNilOptions, &request);
 										usleep(kDelayDDCTimingRequest);
 										if (result) {
-											cprintf("(IOI2CSendRequest error:%x) ", result);
+											cprintf("(IOI2CSendRequest %s) ", DumpOneReturn(resultStr, sizeof(resultStr), result));
 											break;
 										}
 										bzero(&request, sizeof(request));
@@ -3599,7 +3600,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 									usleep(kDelayDDCTimingReply);
 
 									if (result) {
-										cprintf("(IOI2CSendRequest error:%x) ", result);
+										cprintf("(IOI2CSendRequest %s) ", DumpOneReturn(resultStr, sizeof(resultStr), result));
 										break;
 									}
 									if (!ddcreplyisgood(&request, false, 0x6e, timingReportBytes, sizeof(timingReportBytes)) || (timingReportBytes[1] & 0x7f) != 0x06 || timingReportBytes[2] != 0x4e) {
@@ -3696,7 +3697,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 									} // for attempt
 
 									if (result) {
-										iprintf("(IOI2CSendRequest error:%x)\n", result);
+										iprintf("(IOI2CSendRequest %s)\n", DumpOneReturn(resultStr, sizeof(resultStr), result));
 										break;
 									}
 									if (ddcReplyIsBad) {
@@ -3808,7 +3809,7 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 											result = IOI2CSendRequest(i2cconnect, kNilOptions, &request);
 											usleep(kDelayMCCSEDIDRequest);
 											if (result) {
-												iprintf("(IOI2CSendRequest error:%x)\n", result);
+												iprintf("(IOI2CSendRequest %s)\n", DumpOneReturn(resultStr, sizeof(resultStr), result));
 												break;
 											}
 											bzero(&request, sizeof(request));
@@ -3849,11 +3850,11 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 											}
 										}
 										else {
-											cprintf("(request error:%x)", request.result);
+											cprintf("(request %s)", DumpOneReturn(resultStr, sizeof(resultStr), request.result));
 										}
 									}
 									else {
-										cprintf("(IOI2CSendRequest error:%x)", result);
+										cprintf("(IOI2CSendRequest %s)", DumpOneReturn(resultStr, sizeof(resultStr), result));
 									}
 									cprintf(" }\n");
 								} // for blockNdx
