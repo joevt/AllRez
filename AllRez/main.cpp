@@ -1365,6 +1365,7 @@ CFMutableDictionaryRef DumpDisplayParameters(const char *parametersName, CFDicti
 							else if(!strcmp(key, kIODisplayParametersFlushKey        )) { name = "kIODisplayParametersFlushKey"; }
 
 							else if(!strcmp(key, "vblm"                              )) { name = "kConnectionVBLMultiplier"; isFixedPoint = true; }
+							else if(!strcmp(key, "pscn"                              )) { name = "kConnectionUnderscan"; isFixedPoint = true; }
 
 							else name = key;
 							
