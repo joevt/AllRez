@@ -2065,7 +2065,7 @@ void DumpOneAttribute(UInt64 attribute, bool set, bool forConnection, void *valu
 				break;
 
 			case kConnectionIgnore:
-				scnprintf(buf, bufSize, "isMuted:%s%s%s", ((value & (1LL << 31)) == 1) ? "true" : "false", (value & ~(1LL << 31)) ? " " : "", (value & ~(1 << 31)) ? UNKNOWN_VALUE(value) : "");
+				scnprintf(buf, bufSize, "isMuted:%s%s%s", ((value & (1LL << 31)) == 1) ? "true" : "false", (value & ~(1LL << 31)) ? " " : "", (value & ~(1 << 31)) ? UNKNOWN_VALUE(value & ~(1 << 31)) : "");
 				break;
 			
 			case kConnectionChanged:
