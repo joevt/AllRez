@@ -3008,41 +3008,89 @@ void DumpDisplayService(io_service_t ioFramebufferService, int modeAlias)
 				);
 */
 				
-#define OneNumber0(_name, _format, _calc) \
-				{ \
+#define OneNumber0(_name, _format, ...) \
+				do { \
 					num = (CFNumberRef)CFDictionaryGetValue(IOFBProperties, CFSTR(_name)); \
 					if (num && CFGetTypeID(num) == CFNumberGetTypeID()) { \
 						CFNumberGetValue(num, kCFNumberSInt32Type, &numValue); \
-						iprintf("%s = " _format ";\n", _name, _calc); \
+						iprintf("%s = " _format ";\n", _name, ##__VA_ARGS__); \
 						CFDictionaryRemoveValue(IOFBProperties, CFSTR(_name)); \
 					} \
-				}
+				} while (0)
 #define OneNumber(_name, _format) OneNumber0(_name, _format, numValue)
 
-#define OneDataNum(_name, _bits, _format) \
-				{ \
+#define OneDataNum0(_name, _bits, _format, ...) \
+				do { \
 					CFDataRef data = (CFDataRef)CFDictionaryGetValue(IOFBProperties, CFSTR(_name)); \
 					if (data && CFGetTypeID(data) == CFDataGetTypeID()) { \
 						const UInt8* thebytes = CFDataGetBytePtr(data); \
 						CFIndex len = CFDataGetLength(data); \
 						if (thebytes && len * 8 == _bits) { \
-							iprintf("%s = " _format ";\n", _name, *((SInt ## _bits *)thebytes)); \
+							SInt ## _bits numValue = *(SInt ## _bits *)thebytes; \
+							iprintf("%s = " _format ";\n", _name, ##__VA_ARGS__); \
 							CFDictionaryRemoveValue(IOFBProperties, CFSTR(_name)); \
 						} \
 					} \
-				}
+				} while (0)
 
-				OneNumber0("IOFBCurrentPixelClock", "%g MHz", numValue / 1000000.0) // kIOFBCurrentPixelClockKey
-				OneDataNum("IOFBUIScale", 32, "%d") // kIOFBUIScaleKey
+#define OneDataString(_name) \
+				do { \
+					CFDataRef data = (CFDataRef)CFDictionaryGetValue(IOFBProperties, CFSTR(_name)); \
+					if (data && CFGetTypeID(data) == CFDataGetTypeID()) { \
+						const UInt8* thebytes = CFDataGetBytePtr(data); \
+						CFIndex len = CFDataGetLength(data); \
+						iprintf("%s = \"%.*s\";\n", _name, (int)len, thebytes); \
+						CFDictionaryRemoveValue(IOFBProperties, CFSTR(_name)); \
+					} \
+				} while (0)
+
+
+				
+#define OneDataNum(_name, _bits, _format) OneDataNum0(_name, _bits, _format, numValue)
+			
+#define OneDataOrNum0(_name, _format, ...) do { OneDataNum0(_name, 32, _format, ##__VA_ARGS__); OneNumber0(_name, _format, ##__VA_ARGS__); } while (0)
+
+
+				OneNumber0("IOFBCurrentPixelClock", "%g MHz", numValue / 1000000.0); // kIOFBCurrentPixelClockKey
+				OneDataNum("IOFBUIScale", 32, "%d"); // kIOFBUIScaleKey
+				OneDataNum0("IOScreenRestoreState", 32, "%s",
+					numValue == kIOScreenRestoreStateNone   ? "kIOScreenRestoreStateNone" :
+					numValue == kIOScreenRestoreStateNormal ? "kIOScreenRestoreStateNormal" :
+					numValue == kIOScreenRestoreStateDark   ? "kIOScreenRestoreStateDark" :
+					UNKNOWN_VALUE(numValue)
+				); // kIOScreenRestoreStateKey
+
+				OneNumber("IOFBDependentID", "0x%08x"); // kIOFBDependentIDKey
+
+				OneNumber("IOFBWaitCursorFrames", "%d"); // kIOFBWaitCursorFramesKey
+				OneNumber0("IOFBWaitCursorPeriod", "%d ns (%g Hz)", numValue, 1000000000.0 / numValue); // kIOFBWaitCursorPeriodKey
+				OneDataOrNum0("av-signal-type", "%s",
+					numValue == kIOFBAVSignalTypeUnknown ? "kIOFBAVSignalTypeUnknown" :
+					numValue == kIOFBAVSignalTypeVGA     ? "kIOFBAVSignalTypeVGA" :
+					numValue == kIOFBAVSignalTypeDVI     ? "kIOFBAVSignalTypeDVI" :
+					numValue == kIOFBAVSignalTypeHDMI    ? "kIOFBAVSignalTypeHDMI" :
+					numValue == kIOFBAVSignalTypeDP      ? "kIOFBAVSignalTypeDP" :
+					UNKNOWN_VALUE(numValue)
+				); // kIOFBAVSignalTypeKey
+
+				OneDataString("name"); // kPropertyName
+				OneDataString("compatible"); // kPropertyCompatible
+				OneDataString("display-type");
+
+				OneDataNum("DPLanes", 32, "%d");
+				OneDataNum("DPLinkBit", 32, "%d");
+				OneDataNum0("DPLinkRate", 32, "%g Gbps", numValue / 10000.0);
+
 				DoAllBooleans(IOFBProperties);
-				OneDataNum("ATY,fb_linebytes", 32, "%d")
-				OneDataNum("ATY,fb_offset", 64, "0x%llx")
-				OneDataNum("ATY,fb_size", 64, "%lld")
-				OneDataNum("ATY,fb_maxshrink", 16, "%hd")
-				OneDataNum("ATY,fb_maxstretch", 16, "%hd")
-				OneNumber("ATY,fb_minVTotal", "%d")
-				OneNumber("ATY,fb_maxVTotal", "%d")
-
+				OneDataNum("ATY,fb_linebytes", 32, "%d");
+				OneDataNum("ATY,fb_offset", 64, "0x%llx");
+				OneDataNum("ATY,fb_size", 64, "%lld");
+				OneDataNum("ATY,fb_maxshrink", 16, "%hd");
+				OneDataNum("ATY,fb_maxstretch", 16, "%hd");
+				OneNumber("ATY,fb_minVTotal", "%d");
+				OneNumber("ATY,fb_maxVTotal", "%d");
+				OneDataString("ATY,EFIDisplay");
+				
 				iprintf("IOFramebuffer properties (unparsed) = ");
 				CFOutput(IOFBProperties);
 				cprintf("; // IOFramebuffer properties (unparsed)\n");
