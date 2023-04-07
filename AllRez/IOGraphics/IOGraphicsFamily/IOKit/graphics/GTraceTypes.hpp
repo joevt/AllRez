@@ -10,8 +10,13 @@
 #ifndef GTraceTypes_hpp
 #define GTraceTypes_hpp
 
+#include "MacOSMacros.h"
+
 #include <stdint.h>
+
+#if MAC_OS_X_VERSION_SDK >= MAC_OS_X_VERSION_10_10
 #include <os/base.h>
+#endif
 
 #include <string.h>
 
@@ -114,6 +119,13 @@
 
 #define GPACKSTRINGCAST(ia)  reinterpret_cast<char *>(ia)
 #define GPACKSTRING(ia, str) strlcpy(GPACKSTRINGCAST(ia), str, sizeof(ia))
+
+#if defined(IOGD530_66)
+// User client commands
+OS_ENUM(gtrace_command, uint64_t,
+    kGTraceCmdFetch = 'Ftch',
+);
+#endif
 
 // These structures must be power of 2 for performance, alignment, and the
 // buffer-to-line calculations

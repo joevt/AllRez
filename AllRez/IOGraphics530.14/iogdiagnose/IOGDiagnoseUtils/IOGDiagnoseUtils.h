@@ -14,7 +14,7 @@
 
 __BEGIN_DECLS
 
-#include "IOGraphicsDiagnose530.14.h"
+#include "IOGraphicsDiagnose.h"
 
 /*!
  @brief Populate a pre-allocated IOGDiagnose pointer with data coming from IOGraphics.

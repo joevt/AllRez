@@ -29,6 +29,7 @@
 #ifndef BSD_SYS_KDEBUG_KERNEL_H
 #define BSD_SYS_KDEBUG_KERNEL_H
 
+#include "MacOSMacros.h"
 #include <mach/boolean.h>
 #include <mach/clock_types.h>
 #include <stdbool.h>
@@ -131,6 +132,8 @@ uint32_t kdebug_commpage_state(void);
 
 #pragma mark - Coprocessor/IOP tracing
 
+#if MAC_OS_X_VERSION_SDK >= MAC_OS_X_VERSION_10_10
+
 typedef enum {
 	/* Trace is now enabled. */
 	KD_CALLBACK_KDEBUG_ENABLED,
@@ -158,6 +161,8 @@ typedef enum {
 	 */
 	KD_CALLBACK_SNAPSHOT_STATE,
 } kd_callback_type;
+
+#endif
 
 __options_decl(kdebug_coproc_flags_t, uint32_t, {
 	/*
@@ -188,6 +193,7 @@ void kernel_debug_enter(uint32_t coreid, uint32_t debugid, uint64_t timestamp,
  * Legacy definitions for the prior IOP tracing.
  */
 
+#if MAC_OS_X_VERSION_SDK >= MAC_OS_X_VERSION_10_10
 struct kd_callback {
 	kd_callback_fn func;
 	void *context;
@@ -195,6 +201,7 @@ struct kd_callback {
 	char iop_name[8];
 };
 typedef struct kd_callback kd_callback_t;
+#endif
 
 __kpi_deprecated("use kdebug_register_coproc instead")
 int kernel_debug_register_callback(kd_callback_t callback);

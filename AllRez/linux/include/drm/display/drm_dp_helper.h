@@ -294,7 +294,7 @@ struct drm_dp_aux {
 	 * I2C-over-AUX adapter.
 	 *
 	 * It's also used to specify the name of the I2C adapter. If set
-	 * to %NULL, dev_name() of @dev will be used.
+	 * to %NULL, dev_name() of @ dev will be used.
 	 */
 	const char *name;
 
@@ -305,7 +305,7 @@ struct drm_dp_aux {
 	struct i2c_adapter ddc;
 
 	/**
-	 * @dev: pointer to struct device that is the parent for this
+	 * @ dev: pointer to struct device that is the parent for this
 	 * AUX channel.
 	 */
 	struct device *dev;
@@ -370,7 +370,7 @@ struct drm_dp_aux {
 	 * helpers assume this is the case.
 	 *
 	 * Also note that this callback can be called no matter the
-	 * state @dev is in. Drivers that need that device to be powered
+	 * state @ dev is in. Drivers that need that device to be powered
 	 * to perform this operation will first need to make sure it's
 	 * been properly enabled.
 	 */

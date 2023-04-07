@@ -1125,11 +1125,11 @@
 
 /* DSC Extended Capability Branch Total DSC Resources */
 #define DP_DSC_SUPPORT_AND_DSC_DECODER_COUNT		0x2260	/* 2.0 */
-# define DP_DSC_DECODER_COUNT_MASK			(0b111 << 5)
+# define DP_DSC_DECODER_COUNT_MASK			(7 << 5)
 # define DP_DSC_DECODER_COUNT_SHIFT			5
 #define DP_DSC_MAX_SLICE_COUNT_AND_AGGREGATION_0	0x2270	/* 2.0 */
 # define DP_DSC_DECODER_0_MAXIMUM_SLICE_COUNT_MASK	(1 << 0)
-# define DP_DSC_DECODER_0_AGGREGATION_SUPPORT_MASK	(0b111 << 1)
+# define DP_DSC_DECODER_0_AGGREGATION_SUPPORT_MASK	(7 << 1)
 # define DP_DSC_DECODER_0_AGGREGATION_SUPPORT_SHIFT	1
 
 /* Protocol Converter Extension */
@@ -1556,8 +1556,8 @@ struct dp_sdp_header {
 
 /**
  * struct dp_sdp - DP secondary data packet
- * @sdp_header: DP secondary data packet header
- * @db: DP secondaray data packet data blocks
+ * @ sdp_header: DP secondary data packet header
+ * @ db: DP secondaray data packet data blocks
  * VSC SDP Payload for PSR
  * db[0]: Stereo Interface
  * db[1]: 0 - PSR State; 1 - Update RFB; 2 - CRC Valid

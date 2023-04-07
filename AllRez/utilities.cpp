@@ -11,14 +11,19 @@
 #include <sys/time.h>
 #include <mach/mach_time.h>
 
-//uint64_t mach_continuous_time() __attribute__((weak_import));
-
 uint64_t mach_time() {
-	if (__builtin_available(macOS 10.12, *)) {
-		return mach_continuous_time();
-	} else {
-		return mach_absolute_time();
-	}
+#if MAC_OS_X_VERSION_SDK >= MAC_OS_X_VERSION_10_12
+	#if __has_builtin(__builtin_available)
+		if (__builtin_available(macOS 10.12, *)) {
+			return mach_continuous_time();
+		}
+	#else
+		if (&mach_continuous_time) {
+			return mach_continuous_time();
+		}
+	#endif
+#endif
+	return mach_absolute_time();
 }
 
 UInt64 MicrosecondsToAbsoluteTime(UInt64 micro) {
@@ -77,7 +82,7 @@ void strftimestamp(char *buf, size_t bufsize, const char *format, int decimals, 
 */
 	int64_t nsoffset = timestamp - nowct;
 	int64_t thenns = nowns + nsoffset + 5LL * factor / 10; // round
-	time_t thentime = thenns / 1000000000;
+	time_t thentime = (time_t)(thenns / 1000000000);
 
 	struct tm thentm;
 	localtime_r(&thentime, &thentm);

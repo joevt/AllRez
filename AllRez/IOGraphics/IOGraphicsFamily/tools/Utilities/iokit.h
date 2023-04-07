@@ -9,7 +9,10 @@
 #ifndef IOGDIAGNOSEUTILS_IOKIT
 #define IOGDIAGNOSEUTILS_IOKIT
 
+#if defined(IOGD530_66)
+#else
 #include <utility>
+#endif
 
 #include <IOKit/IOKitLib.h>
 

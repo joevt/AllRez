@@ -5,6 +5,7 @@
 //  Created by joevt on 2022-02-19.
 //
 
+#include "MacOSMacros.h"
 #include <ApplicationServices/ApplicationServices.h>
 
 #include "dpcd.h"
@@ -1017,7 +1018,7 @@ void parsedpcd(UInt8* dpcd) {
 				}
 			}
 
-			dumpnotzero(DP_DFP_CAPABILITY_EXTENSION_SUPPORT + sizeof(union dp_dfp_cap_ext), 0x100) // 0x0af
+			dumpnotzero(DP_DFP_CAPABILITY_EXTENSION_SUPPORT + (uint32_t)sizeof(union dp_dfp_cap_ext), 0x100) // 0x0af
 
 			olf; OUTDENT
 		}
@@ -1704,7 +1705,7 @@ void parsedpcd(UInt8* dpcd) {
 			ob(DP_TEST_REFRESH_RATE_NUMERATOR) { // 0x234
 				cp("%d", val);
 				lb("TEST_REFRESH_RATE")
-				cp("%gHz", val / ((d8(DP_TEST_MISC1) & DP_TEST_REFRESH_DENOMINATOR)) ? 1.001 : 1);
+				cp("%gHz", val / (((d8(DP_TEST_MISC1) & DP_TEST_REFRESH_DENOMINATOR)) ? 1.001 : 1));
 			}
 
 			dumpnotzero(0x235, 0x240);

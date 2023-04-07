@@ -5,15 +5,21 @@
 //  Created by joevt on 2022-06-04.
 //
 
+#include "MacOSMacros.h"
 #include "AGDCDiagnose.h"
-#include <sys/socket.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <time.h>
+#include <errno.h>
 #ifdef __cplusplus
-#include <cerrno>
+//#include <cerrno>
 #endif
+#include <sys/socket.h>
+#include <CoreFoundation/CFByteOrder.h>
+
 #include "printf.h"
 #include "utilities.h"
-#include <time.h>
-#include <CoreFoundation/CFByteOrder.h>
 
 #define kDisplayPolicyStateSocketName "/var/run/displaypolicyd/state"
 
@@ -45,7 +51,7 @@ void GetDisplayPolicyState(void **buf, size_t *bufSize)
 	address.family = AF_UNIX;
 	address.len = sizeof(address);
 	strlcpy(address.path, "/var/run/displaypolicyd/state", sizeof(address.path));
-	result = connect(sock, (struct sockaddr *)&address, sizeof(address));
+	result = connect(sock, (struct sockaddr *)&address, (socklen_t)sizeof(address));
 	if (result) {
 		err = errno;
 		errstr = strerror(err);
@@ -71,7 +77,7 @@ void GetDisplayPolicyState(void **buf, size_t *bufSize)
 			}
 		}
 		bytesread = read(sock, (uint8_t*)lbuf + offset, alloc - offset);
-		if (bytesread < 0) {
+		if ((int32_t)bytesread < 0) {
 			err = errno;
 			errstr = strerror(err);
 			iprintf("read failed; errno %d: %s\n", err, errstr);
@@ -88,18 +94,35 @@ void GetDisplayPolicyState(void **buf, size_t *bufSize)
 }
 
 
+char * GetServicePath(io_service_t device);
 
 CFStringRef GetOneRegPath(reginfo reg) {
+	CFStringRef cfpath = NULL;
+#if MAC_OS_X_VERSION_SDK >= MAC_OS_X_VERSION_10_6
 	CFMutableDictionaryRef match = IORegistryEntryIDMatching(reg);
 	io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, match);
-	CFStringRef cfpath = NULL;
 	if (service) {
-		cfpath = IORegistryEntryCopyPath(service, "IOService");
+#if MAC_OS_X_VERSION_SDK >= MAC_OS_X_VERSION_10_11
+	#if __has_builtin(__builtin_available)
+		if (__builtin_available(macOS 10.11, *)) {
+			cfpath = IORegistryEntryCopyPath(service, "IOService");
+		} else
+	#else
+		if (&IORegistryEntryCopyPath) {
+			cfpath = IORegistryEntryCopyPath(service, "IOService");
+		} else
+	#endif
+#endif
+		{
+			char * path = GetServicePath(service);
+			cfpath = CFStringCreateWithCString(kCFAllocatorDefault, path, kCFStringEncodingUTF8);
+			free(path);
+		}
 		IOObjectRelease(service);
 	}
+#endif
 	return cfpath;
 }
-
 
 
 void DoOneReg(uint16_t gpuid, reginfo reg, const char * name, const char * parent) {
@@ -117,7 +140,6 @@ void DoOneReg(uint16_t gpuid, reginfo reg, const char * name, const char * paren
 	
 	if (cfpath) CFRelease(cfpath);
 }
-
 
 
 int entrycompare(const void *entry1, const void *entry2) {
@@ -233,8 +255,8 @@ static void HandleTag_ioreturn(uint16_t tag, uint64_t data, const char *name) {
 	}
 	else {
 		cprintf("=%lld", data & 0x0ffff);
-		if (data & 0xffffffffffff0000)
-			cprintf(",?0x%llx", data & 0xffffffffffff0000);
+		if (data & 0xffffffffffff0000ULL)
+			cprintf(",?0x%llx", data & 0xffffffffffff0000ULL);
 	}
 }
 
@@ -248,17 +270,17 @@ static void HandleTag_minus1(uint16_t tag, uint64_t data) { // 10000cac4
 
 static void HandleTag_0(uint16_t tag, uint64_t data) { // 10000c806
 	cprintf(":0=%lld", data & 0x0ffff);
-	if (data & 0xffffffffffff0000) cprintf(",?0x%llx", data & 0xffffffffffff0000);
+	if (data & 0xffffffffffff0000ULL) cprintf(",?0x%llx", data & 0xffffffffffff0000ULL);
 }
 
 static void HandleTag_1(uint16_t tag, uint64_t data) { // 10000cd92
 	cprintf(":1=%lld", data & 0x0ffff);
-	if (data & 0xffffffffffff0000) cprintf(",?0x%llx", data & 0xffffffffffff0000);
+	if (data & 0xffffffffffff0000ULL) cprintf(",?0x%llx", data & 0xffffffffffff0000ULL);
 }
 
 static void HandleTag_addr_bytes(uint16_t tag, uint64_t data) { // 10000c0c0
 	cprintf(":addr=%lld,bytes=%lld", data & 0xffffff, (data >> 0x20) & 0xff);
-	if (data & 0xffffff00ff000000) cprintf(",?0x%llx", data & 0xffffff00ff000000);
+	if (data & 0xffffff00ff000000ULL) cprintf(",?0x%llx", data & 0xffffff00ff000000ULL);
 }
 
 static void HandleTag_agdpRegId(uint16_t tag, uint64_t data) { // 10000c7e2
@@ -288,12 +310,12 @@ static void HandleTag_count(uint16_t tag, uint64_t data) { // 10000c594, 10000ca
 
 static void HandleTag_doAPI_pport_enabled_pport_linkTrained(uint16_t tag, uint64_t data) { // 10000ca07
 	cprintf(":doAPI=%lld,pport->enabled=%lld,pport->linkTrained=%lld", (data >> 0x20) & 0xff, (data >> 0x10) & 0xff, data & 0xff);
-	if (data & 0xffffff00ffff0000) cprintf(",?0x%llx", data & 0xffffff00ffff0000);
+	if (data & 0xffffff00ffff0000ULL) cprintf(",?0x%llx", data & 0xffffff00ffff0000ULL);
 }
 
 static void HandleTag_element_data_address_port_element_data_address_stream(uint16_t tag, uint64_t data) { // 10000cdef
 	cprintf(":element->data.address.port=%lld,element->data.address.stream=%lld", (data >> 0x20) & 0xff, data & 0xff);
-	if (data & 0xffffff00ffffff00) cprintf(",?0x%llx", data & 0xffffff00ffffff00);
+	if (data & 0xffffff00ffffff00ULL) cprintf(",?0x%llx", data & 0xffffff00ffffff00ULL);
 }
 
 static void HandleTag_element_errorCountAll_errorCount_kDeviceHistory_OnlineErrorLinkTrain_errorCount_kDeviceHistory_OnlineErrorBandWidth_errorCount_kDeviceHistory_OnlineErrorMultiLink_errorCount_kDeviceHistory_OnlineErrorSimple(uint16_t tag, uint64_t data) { // 10000c3f1
@@ -302,7 +324,7 @@ static void HandleTag_element_errorCountAll_errorCount_kDeviceHistory_OnlineErro
 	cprintf(",element->errorCount[kDeviceHistory_OnlineErrorBandWidth]=%lld", (data >> 8) & 0xff);
 	cprintf(",element->errorCount[kDeviceHistory_OnlineErrorMultiLink]=%lld", (data >> 0x10) & 0xff);
 	cprintf(",element->errorCount[kDeviceHistory_OnlineErrorSimple]=%lld", (data >> 0x18) & 0xff);
-	if (data & 0x00ffffff00000000) cprintf(",?0x%llx", data & 0x00ffffff00000000);
+	if (data & 0x00ffffff00000000ULL) cprintf(",?0x%llx", data & 0x00ffffff00000000ULL);
 }
 
 static void HandleTag_enable(uint16_t tag, uint64_t data) { // 10000c395
@@ -315,7 +337,7 @@ static void HandleTag_enter(uint16_t tag, uint64_t data) { // 10000bef4
 
 static void HandleTag_err(uint16_t tag, uint64_t data) { // 10000cb5f
 	cprintf(":err=%lld", data & 0x0ffff);
-	if (data & 0xffffffffffff0000) cprintf(",?0x%llx", data & 0xffffffffffff0000);
+	if (data & 0xffffffffffff0000ULL) cprintf(",?0x%llx", data & 0xffffffffffff0000ULL);
 }
 
 static void HandleTag_error(uint16_t tag, uint64_t data) { // 10000bd30
@@ -356,12 +378,12 @@ static void HandleTag_event_dot_type(uint16_t tag, uint64_t data) { // 10000c674
 
 static void HandleTag_fb(uint16_t tag, uint64_t data) { // 10000cdd0
 	cprintf(":fb=%lld", data & 0x0ffff);
-	if (data & 0xffffffffffff0000) cprintf(",?0x%llx", data & 0xffffffffffff0000);
+	if (data & 0xffffffffffff0000ULL) cprintf(",?0x%llx", data & 0xffffffffffff0000ULL);
 }
 
 static void HandleTag_fbid(uint16_t tag, uint64_t data) { // 10000c825
 	cprintf(":fbid=%lld", data & 0x0ffff);
-	if (data & 0xffffffffffff0000) cprintf(",?0x%llx", data & 0xffffffffffff0000);
+	if (data & 0xffffffffffff0000ULL) cprintf(",?0x%llx", data & 0xffffffffffff0000ULL);
 }
 
 static void HandleTag_fbOfflineMask(uint16_t tag, uint64_t data) { // 10000c18e
@@ -374,7 +396,7 @@ static void HandleTag_fbOnlineMask(uint16_t tag, uint64_t data) { // 10000bc53
 
 static void HandleTag_fbslot_id(uint16_t tag, uint64_t data) { // 10000cdb1
 	cprintf(":fbslot->id=%lld", data & 0x0ffff);
-	if (data & 0xffffffffffff0000) cprintf(",?0x%llx", data & 0xffffffffffff0000);
+	if (data & 0xffffffffffff0000ULL) cprintf(",?0x%llx", data & 0xffffffffffff0000ULL);
 }
 
 static void HandleTag_fDisplaySleeping(uint16_t tag, uint64_t data) { // 10000c8bc
@@ -411,7 +433,7 @@ static void HandleTag_gpu_dispPolicyState_nextState(uint16_t tag, uint64_t data)
 
 static void HandleTag_gpu_kernGPU_gpuId(uint16_t tag, uint64_t data) { // 10000c692
 	cprintf(":gpu->kernGPU.gpuId=0x%llx", data & 0x0ffff);
-	if (data & 0xffffffffffff0000) cprintf(",?0x%llx", data & 0xffffffffffff0000);
+	if (data & 0xffffffffffff0000ULL) cprintf(",?0x%llx", data & 0xffffffffffff0000ULL);
 }
 
 static void HandleTag_gpu_pmAssertionId(uint16_t tag, uint64_t data) { // 10000c862
@@ -428,7 +450,7 @@ static void HandleTag_gpu_state_nextState(uint16_t tag, uint64_t data) { // 1000
 
 static void HandleTag_gpuId(uint16_t tag, uint64_t data) { // 10000cb40
 	cprintf(":gpuId=0x%llx", data & 0x0ffff);
-	if (data & 0xffffffffffff0000) cprintf(",?0x%llx", data & 0xffffffffffff0000);
+	if (data & 0xffffffffffff0000ULL) cprintf(",?0x%llx", data & 0xffffffffffff0000ULL);
 }
 
 static void HandleTag_gState_active(uint16_t tag, uint64_t data) { // 10000cb9c
@@ -445,17 +467,17 @@ static void HandleTag_i(uint16_t tag, uint64_t data) { // 10000bd12, 10000c02a, 
 
 static void HandleTag_idx_element_isWhiteListDisplay_element_isMultiStreamDisplay(uint16_t tag, uint64_t data) { // 10000bbe9
 	cprintf(":idx=%lld,element->isWhiteListDisplay=%lld,element->isMultiStreamDisplay=%lld", data >> 0x38, (data >> 8) & 0xff, data & 0xff);
-	if (data & 0x00ffffffffff0000) cprintf(",?0x%llx", data & 0x00ffffffffff0000);
+	if (data & 0x00ffffffffff0000ULL) cprintf(",?0x%llx", data & 0x00ffffffffff0000ULL);
 }
 
 static void HandleTag_info_bitRate_laneCount_lane_0_1_status_lane_2_3_status(uint16_t tag, uint64_t data) { // 10000ccd2
 	cprintf(":info->bitRate=%lld,info->laneCount=%lld,info->lane_0_1_status=%lld,info->lane_2_3_status=%lld", (data >> 0x30) & 0xff, (data >> 0x20) & 0xff, (data >> 8) & 0xff, data & 0xff);
-	if (data & 0xff00ff00ffff0000) cprintf(",?0x%llx", data & 0xff00ff00ffff0000);
+	if (data & 0xff00ff00ffff0000ULL) cprintf(",?0x%llx", data & 0xff00ff00ffff0000ULL);
 }
 
 static void HandleTag_kernResult16(uint16_t tag, uint64_t data) { // 10000c3d2
 	cprintf(":kernResult=%lld", data & 0x0ffff);
-	if (data & 0xffffffffffff0000) cprintf(",?0x%llx", data & 0xffffffffffff0000);
+	if (data & 0xffffffffffff0000ULL) cprintf(",?0x%llx", data & 0xffffffffffff0000ULL);
 }
 
 static void HandleTag_kernResult(uint16_t tag, uint64_t data) { // 10000cb7e
@@ -464,7 +486,7 @@ static void HandleTag_kernResult(uint16_t tag, uint64_t data) { // 10000cb7e
 
 static void HandleTag_link_address_port_link_address_stream(uint16_t tag, uint64_t data) { // 10000cc32
 	cprintf(":link->address.port=%lld,link->address.stream=%lld", (data >> 0x20) & 0xff, data & 0xff);
-	if (data & 0xffffff00ffffff00) cprintf(",?0x%llx", data & 0xffffff00ffffff00);
+	if (data & 0xffffff00ffffff00ULL) cprintf(",?0x%llx", data & 0xffffff00ffffff00ULL);
 }
 
 static void HandleTag_link_flags(uint16_t tag, uint64_t data) { // 10000c264
@@ -473,17 +495,17 @@ static void HandleTag_link_flags(uint16_t tag, uint64_t data) { // 10000c264
 
 static void HandleTag_lockdownActive_fReason(uint16_t tag, uint64_t data) { // 10000be0d, 10000be5a, 10000bea7
 	cprintf(":lockdownActive=%lld,fReason=%lld", data & 1, (data >> 8) & 0xff);
-	if (data & 0xffffffffffff00fe) cprintf(",?0x%llx", data & 0xffffffffffff00fe);
+	if (data & 0xffffffffffff00feULL) cprintf(",?0x%llx", data & 0xffffffffffff00feULL);
 }
 
 static void HandleTag_map_id_state_linkedState_NumberOfMembers(uint16_t tag, uint64_t data) { // 10000bc71
 	cprintf(":map->id=%lld,map->state=%lld,map->linkedState=%lld,map->NumberOfMembers=%lld", data >> 0x38, (data >> 0x30) & 0xff, (data >> 0x20) & 0xff, data & 0xff);
-	if (data & 0x0000ff00ffffff00) cprintf(",?0x%llx", data & 0x0000ff00ffffff00);
+	if (data & 0x0000ff00ffffff00ULL) cprintf(",?0x%llx", data & 0x0000ff00ffffff00ULL);
 }
 
 static void HandleTag_mfg_id_product_id(uint16_t tag, uint64_t data) { // 10000bb13
 	cprintf(":mfg_id=%lld,product_id=%lld", (data >> 0x20) & 0xffff, data & 0xffff);
-	if (data & 0xffff0000ffff0000) cprintf(",?0x%llx", data & 0xffff0000ffff0000);
+	if (data & 0xffff0000ffff0000ULL) cprintf(",?0x%llx", data & 0xffff0000ffff0000ULL);
 }
 
 static void HandleTag_mostSig(uint16_t tag, uint64_t data) { // 10000c98b
@@ -492,7 +514,7 @@ static void HandleTag_mostSig(uint16_t tag, uint64_t data) { // 10000c98b
 
 static void HandleTag_move2errorq_move2idleq(uint16_t tag, uint64_t data) { // 10000c337
 	cprintf(":move2errorq=%lld,move2idleq=%lld", (data >> 0x20) & 0xff, data & 0xff);
-	if (data & 0xffffff00ffffff00) cprintf(",?0x%llx", data & 0xffffff00ffffff00);
+	if (data & 0xffffff00ffffff00ULL) cprintf(",?0x%llx", data & 0xffffff00ffffff00ULL);
 }
 
 static void HandleTag_ms(uint16_t tag, uint64_t data) { // 10000c0a2
@@ -517,12 +539,12 @@ static void HandleTag_nothing(uint16_t tag, uint64_t data) { // 10000bd7f
 
 static void HandleTag_ok(uint16_t tag, uint64_t data) { // 10000c3b3
 	cprintf(":ok=%lld", data & 0xff);
-	if (data & 0xffffffffffffff00) cprintf(",?0x%llx", data & 0xffffffffffffff00);
+	if (data & 0xffffffffffffff00ULL) cprintf(",?0x%llx", data & 0xffffffffffffff00ULL);
 }
 
 static void HandleTag_online(uint16_t tag, uint64_t data) { // 10000cd73
 	cprintf(":online=%lld", data & 0x0ffff);
-	if (data & 0xffffffffffff0000) cprintf(",?0x%llx", data & 0xffffffffffff0000);
+	if (data & 0xffffffffffff0000ULL) cprintf(",?0x%llx", data & 0xffffffffffff0000ULL);
 }
 
 static void HandleTag_params_stateNumber(uint16_t tag, uint64_t data) { // 10000c2dd
@@ -543,22 +565,22 @@ static void HandleTag_port(uint16_t tag, uint64_t data) { // 10000bfbd, 10000bff
 
 static void HandleTag_portbit32(uint16_t tag, uint64_t data) { // 10000ccaf
 	cprintf(":port=%lld", (data >> 0x20) & 0xff);
-	if (data & 0xffffff00ffffffff) cprintf(",?0x%llx", data & 0xffffff00ffffffff);
+	if (data & 0xffffff00ffffffffULL) cprintf(",?0x%llx", data & 0xffffff00ffffffffULL);
 }
 
 static void HandleTag_port_stream(uint16_t tag, uint64_t data) { // 10000bab5, 10000c130
 	cprintf(":port=%lld,stream=%lld", (data >> 0x20) & 0xff, data & 0xff);
-	if (data & 0xffffff00ffffff00) cprintf(",?0x%llx", data & 0xffffff00ffffff00);
+	if (data & 0xffffff00ffffff00ULL) cprintf(",?0x%llx", data & 0xffffff00ffffff00ULL);
 }
 
 static void HandleTag_porttype_transport(uint16_t tag, uint64_t data) { // 10000cae2
 	cprintf(":porttype=%lld,transport=%lld", (data >> 0x20) & 0xff, data & 0xff);
-	if (data & 0xffffff00ffffff00) cprintf(",?0x%llx", data & 0xffffff00ffffff00);
+	if (data & 0xffffff00ffffff00ULL) cprintf(",?0x%llx", data & 0xffffff00ffffff00ULL);
 }
 
 static void HandleTag_pport_enabled_pport_linkTrained(uint16_t tag, uint64_t data) { // 10000c9a9
 	cprintf(":pport->enabled=%lld,pport->linkTrained=%lld", (data >> 0x20) & 0xff, data & 0xff);
-	if (data & 0xffffff00ffffff00) cprintf(",?0x%llx", data & 0xffffff00ffffff00);
+	if (data & 0xffffff00ffffff00ULL) cprintf(",?0x%llx", data & 0xffffff00ffffff00ULL);
 }
 
 static void HandleTag_pport_fNodeCount(uint16_t tag, uint64_t data) { // 10000bb8f, 10000bbcb
@@ -567,12 +589,12 @@ static void HandleTag_pport_fNodeCount(uint16_t tag, uint64_t data) { // 10000bb
 
 static void HandleTag_pport_port_enabled(uint16_t tag, uint64_t data) { // 10000c1ac
 	cprintf(":pport->port=%lld,pport->enabled=%lld", (data >> 0x20) & 0xff, data & 0xff);
-	if (data & 0xffffff00ffffff00) cprintf(",?0x%llx", data & 0xffffff00ffffff00);
+	if (data & 0xffffff00ffffff00ULL) cprintf(",?0x%llx", data & 0xffffff00ffffff00ULL);
 }
 
 static void HandleTag_pport_porttype_pport_transport_pport_linkTrained_pport_linkConfig_bitRate_pport_linkConfig_laneCount(uint16_t tag, uint64_t data) { // 10000c4ce
 	cprintf(":pport->porttype=%lld,pport->transport=%lld,pport->linkTrained=%lld,pport->linkConfig.bitRate=%lld,pport->linkConfig.laneCount=%lld", data >> 0x38, (data >> 0x28) & 0xff, (data >> 0x30) & 0xff, data & 0xff, (data >> 8) & 0xff);
-	if (data & 0x000000ffffff0000) cprintf(",?0x%llx", data & 0x000000ffffff0000);
+	if (data & 0x000000ffffff0000ULL) cprintf(",?0x%llx", data & 0x000000ffffff0000ULL);
 }
 
 static void HandleTag_pportscratch_fNodeCount(uint16_t tag, uint64_t data) { // 10000bbad
@@ -597,7 +619,7 @@ static void HandleTag_reload(uint16_t tag, uint64_t data) { // 10000c112
 
 static void HandleTag_state(uint16_t tag, uint64_t data) { // 10000c7c3
 	cprintf(":state=%lld", data & 0x0ffff);
-	if (data & 0xffffffffffff0000) cprintf(",?0x%llx", data & 0xffffffffffff0000);
+	if (data & 0xffffffffffff0000ULL) cprintf(",?0x%llx", data & 0xffffffffffff0000ULL);
 }
 
 static void HandleTag_status(uint16_t tag, uint64_t data) { // 10000ca88
@@ -606,12 +628,12 @@ static void HandleTag_status(uint16_t tag, uint64_t data) { // 10000ca88
 
 static void HandleTag_status_auxp_aux_status(uint16_t tag, uint64_t data) { // 10000ce6b
 	cprintf(":status=%lld,auxp->aux.status=%lld", data & 0xff, (data >> 0x20) & 0xff);
-	if (data & 0xffffff00ffffff00) cprintf(",?0x%llx", data & 0xffffff00ffffff00);
+	if (data & 0xffffff00ffffff00ULL) cprintf(",?0x%llx", data & 0xffffff00ffffff00ULL);
 }
 
 static void HandleTag_status16(uint16_t tag, uint64_t data) { // 10000cc90
 	cprintf(":status=%lld", data & 0x0ffff);
-	if (data & 0xffffffffffff0000) cprintf(",?0x%llx", data & 0xffffffffffff0000);
+	if (data & 0xffffffffffff0000ULL) cprintf(",?0x%llx", data & 0xffffffffffff0000ULL);
 }
 
 static void HandleTag_type(uint16_t tag, uint64_t data) { // 10000c282
@@ -634,7 +656,6 @@ void DoOneTag(uint16_t tag, uint64_t data, void (* handleTag)(uint16_t tag, uint
 	cprintf(" %s", GetTagStr(tag));
 	handleTag(tag, data);
 }
-
 
 
 typedef struct {
@@ -1211,6 +1232,9 @@ void DoDisplayPolicyState(void) {
 	int i;
 	GetDisplayPolicyState(&buf, &bufSize);
 	iprintf("size: 0x%lx bytes.\n", bufSize);
+	if (!buf || !bufSize) {
+		return;
+	}
 	
 	DisplayPolicyState *state = (DisplayPolicyState *)buf;
 	
@@ -1343,7 +1367,7 @@ void DoDisplayPolicyState(void) {
 
 	char thenstr[100];
 	int64_t thenns = header->ussue * 1000;
-	time_t thentime = thenns / 1000000000;
+	time_t thentime = (time_t)(thenns / 1000000000);
 	struct tm thentm;
 	localtime_r(&thentime, &thentm);
 	size_t len = strftime(thenstr, sizeof(thenstr), "%F %T", &thentm);

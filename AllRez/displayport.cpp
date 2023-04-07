@@ -2,16 +2,19 @@
 //  mst.m
 //  AllRez
 //
-//  Created by Joe van Tunen on 2022-05-20.
+//  Created by joevt on 2022-05-20.
 //
-
-#include <CoreFoundation/CFByteOrder.h>
+#include "AppleMisc.h"
 #include "displayport.h"
-#include "printf.h"
 #include "dpcd.h"
 #include "iofbdebuguser.h"
+#include "printf.h"
 
-#include "AppleMisc.h"
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include <CoreFoundation/CFByteOrder.h>
 
 //=================================================================================================================================
 // Linux includes
@@ -134,7 +137,7 @@ int gDumpSidebandMessage = 0;
 int gMessageSequenceNumber = 1;
 
 struct WholeMessage {
-	UInt32 dpcdType;
+	uint32_t dpcdType;
 	size_t bodyLength;
 	size_t partLength;
 	UInt8 body[0x1000];
@@ -150,7 +153,7 @@ void ClearWholeMessage(UInt32 dpcdType)
 	bzero(WholeMessage.body, sizeof(WholeMessage.body));
 }
 
-void DumpOneDisplayPortMessage(UInt8 *msgbytes, int msglen, UInt32 dpcdAddress)
+void DumpOneDisplayPortMessage(UInt8 *msgbytes, int msglen, uint32_t dpcdAddress)
 {
 	int i;
 	UInt32 offset = dpcdAddress & 0x01ff;
@@ -728,10 +731,10 @@ void DumpOneDisplayPortMessageBody(void *bodyData, int bodyLength, bool isReply)
 	} // reply
 	
 	if (msg3parseEnd < msg3) {
-		cprintf(" (stopped parsing %ld bytes before the expected end)", msg3 - msg3parseEnd);
+		cprintf(" (stopped parsing %d bytes before the expected end)", (int)((size_t)msg3 - (size_t)msg3parseEnd));
 	}
 	else if (msg3parseEnd > msg3) {
-		cprintf(" (stopped parsing %ld bytes after the expected end)", msg3parseEnd - msg3);
+		cprintf(" (stopped parsing %d bytes after the expected end)", (int)((size_t)msg3parseEnd - (size_t)msg3));
 	}
 } // DumpOneDisplayPortMessageBody
 
@@ -803,13 +806,14 @@ bool mst_get_use_sideband_property(io_service_t ioFramebufferService)
 
 IOReturn dp_dpcd_read(IOI2CConnectRef i2cconnect, int dpcdAddr, int dpcdLength, void *dpcdDest) {
 	IOReturn result;
-	IOI2CRequest sendrequest;
+	IOI2CRequest_10_6_0 sendrequest;
 	bzero(&sendrequest, sizeof(sendrequest));
+	bzero(dpcdDest, dpcdLength);
 	sendrequest.replyTransactionType = kIOI2CDisplayPortNativeTransactionType;
 	sendrequest.replyAddress = dpcdAddr;
 	sendrequest.replyBuffer = (vm_address_t) dpcdDest;
 	sendrequest.replyBytes = dpcdLength;
-	result = IOI2CSendRequest(i2cconnect, kNilOptions, &sendrequest);
+	result = UniversalI2CSendRequest(i2cconnect, kNilOptions, &sendrequest);
 	if (!result) result = sendrequest.result;
 	return result;
 }
@@ -818,13 +822,13 @@ IOReturn dp_dpcd_read(IOI2CConnectRef i2cconnect, int dpcdAddr, int dpcdLength, 
 
 IOReturn dp_dpcd_write(IOI2CConnectRef i2cconnect, int dpcdAddr, int dpcdLength, void *dpcdSource) {
 	IOReturn result;
-	IOI2CRequest sendrequest;
+	IOI2CRequest_10_6_0 sendrequest;
 	bzero(&sendrequest, sizeof(sendrequest));
 	sendrequest.sendTransactionType = kIOI2CDisplayPortNativeTransactionType;
 	sendrequest.sendAddress = dpcdAddr;
 	sendrequest.sendBuffer = (vm_address_t) dpcdSource;
 	sendrequest.sendBytes = dpcdLength;
-	result = IOI2CSendRequest(i2cconnect, kNilOptions, &sendrequest);
+	result = UniversalI2CSendRequest(i2cconnect, kNilOptions, &sendrequest);
 	if (!result) result = sendrequest.result;
 	return result;
 }
@@ -876,7 +880,7 @@ void mst_encode_header(
 	if (pathLength > 15 || (pathLength && !inpath))
 		return;
 	
-	UInt32 len = offsetof(Sideband_MSG1, header.Relative_Address) + msg2size + pathLength / 2 + offsetof(Sideband_MSG3, end);
+	UInt32 len = (UInt32)offsetof(Sideband_MSG1, header.Relative_Address) + msg2size + pathLength / 2 + (UInt32)offsetof(Sideband_MSG3, end);
 	Sideband_MSG1 *msg1 = (Sideband_MSG1 *)malloc(len);
 	if (!msg1)
 		return;
@@ -918,7 +922,7 @@ UInt8 *mst_encode_link_address(UInt8 *inpath, int pathLength, UInt32 *msgLength)
 	Sideband_MSG1 *msg1;
 	Sideband_MSG2 *msg2;
 	Sideband_MSG3 *msg3;
-	mst_encode_header(inpath, pathLength, offsetof(Sideband_MSG2, body.request.Default.end), &len, &msg1, &msg2, &msg3);
+	mst_encode_header(inpath, pathLength, (UInt32)offsetof(Sideband_MSG2, body.request.Default.end), &len, &msg1, &msg2, &msg3);
 	if (msg1) {
 		msg2->body.request.Request_Identifier = DP_LINK_ADDRESS;
 		msg3->body.Sideband_MSG_Body_CRC = crc8((uint8_t*)&msg2->body, msg2->header.Sideband_MSG_Body_Length - 1);
@@ -937,7 +941,7 @@ UInt8 *mst_encode_dpcd_read(UInt8 *inpath, int pathLength, UInt32 *msgLength, in
 	Sideband_MSG1 *msg1;
 	Sideband_MSG2 *msg2;
 	Sideband_MSG3 *msg3;
-	mst_encode_header(inpath, pathLength, offsetof(Sideband_MSG2, body.request.Remote_DPCD_Read.end), &len, &msg1, &msg2, &msg3);
+	mst_encode_header(inpath, pathLength, (UInt32)offsetof(Sideband_MSG2, body.request.Remote_DPCD_Read.end), &len, &msg1, &msg2, &msg3);
 	if (msg1) {
 		msg2->body.request.Request_Identifier = DP_REMOTE_DPCD_READ;
 		msg2->body.request.Remote_DPCD_Read.Port_Number = inpath[0];
@@ -958,7 +962,7 @@ UInt8 *mst_encode_enum_path_resources(UInt8 *inpath, int pathLength, UInt32 *msg
 	Sideband_MSG1 *msg1;
 	Sideband_MSG2 *msg2;
 	Sideband_MSG3 *msg3;
-	mst_encode_header(inpath, pathLength, offsetof(Sideband_MSG2, body.request.Enum_Path_Resources.end), &len, &msg1, &msg2, &msg3);
+	mst_encode_header(inpath, pathLength, (UInt32)offsetof(Sideband_MSG2, body.request.Enum_Path_Resources.end), &len, &msg1, &msg2, &msg3);
 	if (msg1) {
 		mst_set_message_path_message(msg1);
 		msg2->body.request.Request_Identifier = DP_ENUM_PATH_RESOURCES;

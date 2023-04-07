@@ -8,6 +8,7 @@
 #ifndef GTrace_h
 #define GTrace_h
 
+#include "MacOSMacros.h"
 #include <stdint.h>
 #include <sys/cdefs.h>
 
@@ -45,6 +46,7 @@ typedef struct _GTraceThreadInfo {
         uint64_t    u64;
     } TI;
 } sGTraceThreadInfo;
+extern int assertx00[(sizeof(sGTraceThreadInfo) == 8) - 1];
 
 typedef struct _GTraceArgsTag {
     union {
@@ -54,6 +56,7 @@ typedef struct _GTraceArgsTag {
         uint64_t    u64;
     } TAG;
 } sGTraceArgsTag;
+extern int assertx01[(sizeof(sGTraceArgsTag) == 8) - 1];
 
 typedef struct _GTraceArgs {
     union {
@@ -64,6 +67,8 @@ typedef struct _GTraceArgs {
         char        str[32];
     } ARGS;
 } sGTraceArgs;
+extern int assertx02[(sizeof(sGTraceArgs) == 32) - 1];
+
 
 typedef struct _GTrace {
     union {
@@ -79,11 +84,23 @@ typedef struct _GTrace {
 } sGTrace;
 #pragma pack(pop)
 
-#ifdef __cplusplus
-static_assert(sizeof(sGTrace) == 64, "sGTrace != 64 bytes");
+#if defined(__cplusplus) && defined(__clang__) && MAC_OS_X_VERSION_SDK >= MAC_OS_X_VERSION_10_14
+    static_assert(sizeof(sGTrace) == 64, "sGTrace != 64 bytes");
 #else
-#include <AssertMacros.h>
-__Check_Compile_Time(sizeof(sGTrace) == 64);
+    #if MAC_OS_X_VERSION_SDK >= MAC_OS_X_VERSION_10_6
+        #include <AssertMacros.h>
+    #else
+        #ifndef __Check_Compile_Time
+            #ifdef __GNUC__ 
+                #define __Check_Compile_Time( expr )    \
+                    extern int compile_time_assert_failed[ ( expr ) ? 1 : -1 ] __attribute__( ( unused ) )
+            #else
+                #define __Check_Compile_Time( expr )    \
+                    extern int compile_time_assert_failed[ ( expr ) ? 1 : -1 ]
+            #endif
+        #endif
+    #endif
+    __Check_Compile_Time(sizeof(sGTrace) == 64);
 #endif
 
 __END_DECLS

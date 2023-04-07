@@ -67,6 +67,14 @@
 
  */
 
+#define IOGD530_14
+
+#ifndef __clang
+#define nullptr NULL
+#endif
+
+#include "MacOSMacros.h"
+
 #include <CoreFoundation/CoreFoundation.h>
 #include <ApplicationServices/ApplicationServices.h>
 
@@ -78,12 +86,16 @@
 #include <getopt.h>
 #include <memory.h>
 #include <time.h>
+#if MAC_OS_X_VERSION_SDK >= MAC_OS_X_VERSION_10_5
+extern char **environ;
 #include <spawn.h>
+#endif
 #include <sys/wait.h>
 
 
 #include "IOGDiagnoseUtils/IOGDiagnoseUtils.h"
 #include "../GTrace/GTraceTypes.h"
+#include "AppleMisc.h"
 
 
 #define kFILENAME_LENGTH                64
@@ -106,25 +118,39 @@ void print_usage( const char * name )
     fflush(stdout);
 }
 
-extern char **environ;
+#if MAC_OS_X_VERSION_SDK < MAC_OS_X_VERSION_10_5
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+int posix_spawn(pid_t *pid, const char *path, const void *file_actions, const void *attrp, char *const argv[], char *const envp[]) __attribute__((weak_import));
+#ifdef __cplusplus
+}
+#endif
+
+#endif
 
 void agdcdiagnose(FILE * fOut)
 {
-    pid_t       pid = 0;
-    int         status = -1;
-    char        * const agdcArgs[] = {const_cast<char *>("/System/Library/Extensions/AppleGraphicsControl.kext/Contents/MacOS/AGDCDiagnose"),
-        const_cast<char *>("-a"),
-        nullptr};
-    if (NULL != fOut) {
-        fprintf(fOut, "\n\n------------------------------------- AGDC REPORT -------------------------------------\n\n");
-        status = posix_spawn(&pid, agdcArgs[0], NULL, NULL, agdcArgs, environ);
-        if (0 == status) {
-            (void)waitpid(pid, &status, 0);
-        } else {
-            fprintf(fOut, "\tAGDCDiagnose failed to launch\n");
+    #if MAC_OS_X_VERSION_SDK >= MAC_OS_X_VERSION_10_5
+    API_OR_SDK_AVAILABLE_BEGIN(10.5, posix_spawn) {
+        pid_t       pid = 0;
+        int         status = -1;
+        char        * const agdcArgs[] = {const_cast<char *>("/System/Library/Extensions/AppleGraphicsControl.kext/Contents/MacOS/AGDCDiagnose"),
+            const_cast<char *>("-a"),
+            nullptr};
+        if (NULL != fOut) {
+            fprintf(fOut, "\n\n------------------------------------- AGDC REPORT -------------------------------------\n\n");
+            status = posix_spawn(&pid, agdcArgs[0], NULL, NULL, agdcArgs, environ);
+            if (0 == status) {
+                (void)waitpid(pid, &status, 0);
+            } else {
+                fprintf(fOut, "\tAGDCDiagnose failed to launch\n");
+            }
+            fprintf(fOut, "\n---------------------------------------------------------------------------------------\n");
         }
-        fprintf(fOut, "\n---------------------------------------------------------------------------------------\n");
-    }
+    } API_OR_SDK_AVAILABLE_END
+    #endif
 }
 
 uint32_t sizeToLines( uint32_t bufSize )
@@ -134,7 +160,7 @@ uint32_t sizeToLines( uint32_t bufSize )
         lines = kGTraceMaximumLineCount;
     }
     else if (bufSize >= sizeof(sGTrace)) {
-        lines = (1 << (32 - (__builtin_clz(bufSize) + 1))) / sizeof(sGTrace);
+        lines = (1 << (32 - (__builtin_clz(bufSize) + 1))) / (uint32_t)sizeof(sGTrace);
     }
     return (lines);
 }
@@ -171,11 +197,11 @@ bool dumpTokenBuffer(FILE * fOut, uint32_t lastToken, const uint32_t tokenLineCo
                     fprintf(fOut, "\t\tTkn: %04u\tTS: %llu\tLn: %u\tC: %#llx\tCTID: %u-%#llx\tOID: %#llx\tTag: %#llx\tA: %#llx-%#llx-%#llx-%#llx\n",
                             currentLine,
                             traceBuffer[currentLine].traceEntry.timestamp,
-                            traceBuffer[currentLine].traceEntry.traceID.ID.line,
+                            (uint32_t)traceBuffer[currentLine].traceEntry.traceID.ID.line,
                             traceBuffer[currentLine].traceEntry.traceID.ID.component,
-                            traceBuffer[currentLine].traceEntry.threadInfo.TI.cpu,
-							(uint64_t)traceBuffer[currentLine].traceEntry.threadInfo.TI.threadID,
-							(uint64_t)traceBuffer[currentLine].traceEntry.threadInfo.TI.registryID,
+                            (uint32_t)traceBuffer[currentLine].traceEntry.threadInfo.TI.cpu,
+                            (uint64_t)traceBuffer[currentLine].traceEntry.threadInfo.TI.threadID,
+                            (uint64_t)traceBuffer[currentLine].traceEntry.threadInfo.TI.registryID,
                             traceBuffer[currentLine].traceEntry.argsTag.TAG.u64,
                             traceBuffer[currentLine].traceEntry.args.ARGS.u64s[0],
                             traceBuffer[currentLine].traceEntry.args.ARGS.u64s[1],
@@ -187,11 +213,11 @@ bool dumpTokenBuffer(FILE * fOut, uint32_t lastToken, const uint32_t tokenLineCo
                 fprintf(fOut, "\tTkn: %04u\tTS: %llu\tLn: %u\tC: %#llx\tCTID: %u-%#llx\tOID: %#llx\tTag: %#llx\tA: %#llx-%#llx-%#llx-%#llx\t<--\n",
                         currentLine,
                         traceBuffer[currentLine].traceEntry.timestamp,
-                        traceBuffer[currentLine].traceEntry.traceID.ID.line,
+                        (uint32_t)traceBuffer[currentLine].traceEntry.traceID.ID.line,
                         traceBuffer[currentLine].traceEntry.traceID.ID.component,
-                        traceBuffer[currentLine].traceEntry.threadInfo.TI.cpu,
-						(uint64_t)traceBuffer[currentLine].traceEntry.threadInfo.TI.threadID,
-						(uint64_t)traceBuffer[currentLine].traceEntry.threadInfo.TI.registryID,
+                        (uint32_t)traceBuffer[currentLine].traceEntry.threadInfo.TI.cpu,
+                        (uint64_t)traceBuffer[currentLine].traceEntry.threadInfo.TI.threadID,
+                        (uint64_t)traceBuffer[currentLine].traceEntry.threadInfo.TI.registryID,
                         traceBuffer[currentLine].traceEntry.argsTag.TAG.u64,
                         traceBuffer[currentLine].traceEntry.args.ARGS.u64s[0],
                         traceBuffer[currentLine].traceEntry.args.ARGS.u64s[1],
@@ -203,11 +229,11 @@ bool dumpTokenBuffer(FILE * fOut, uint32_t lastToken, const uint32_t tokenLineCo
                     fprintf(fOut, "\t\tTkn: %04u\tTS: %llu\tLn: %u\tC: %#llx\tCTID: %u-%#llx\tOID: %#llx\tTag: %#llx\tA: %#llx-%#llx-%#llx-%#llx\n",
                             currentLine,
                             traceBuffer[currentLine].traceEntry.timestamp,
-                            traceBuffer[currentLine].traceEntry.traceID.ID.line,
+                            (uint32_t)traceBuffer[currentLine].traceEntry.traceID.ID.line,
                             traceBuffer[currentLine].traceEntry.traceID.ID.component,
-                            traceBuffer[currentLine].traceEntry.threadInfo.TI.cpu,
-							(uint64_t)traceBuffer[currentLine].traceEntry.threadInfo.TI.threadID,
-							(uint64_t)traceBuffer[currentLine].traceEntry.threadInfo.TI.registryID,
+                            (uint32_t)traceBuffer[currentLine].traceEntry.threadInfo.TI.cpu,
+                            (uint64_t)traceBuffer[currentLine].traceEntry.threadInfo.TI.threadID,
+                            (uint64_t)traceBuffer[currentLine].traceEntry.threadInfo.TI.registryID,
                             traceBuffer[currentLine].traceEntry.argsTag.TAG.u64,
                             traceBuffer[currentLine].traceEntry.args.ARGS.u64s[0],
                             traceBuffer[currentLine].traceEntry.args.ARGS.u64s[1],
@@ -482,11 +508,10 @@ void dumpGTraceReport( const IOGDiagnose * report, const bool bDumpToFile )
     }
 }
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
-	int iogdiagnose6(int dumpToFile, char *optarg);
+    int iogdiagnose6(int dumpToFile, char *optarg);
 #ifdef __cplusplus
 }
 #endif
@@ -499,23 +524,25 @@ int iogdiagnose6(int dumpToFile, char *optarg)
     bool                        bDumpToFile = false;
     bool                        bBinaryToFile = false;
     char                        inputFilename[256]={0};
-	
-	bDumpToFile = dumpToFile;
-	if (optarg != nullptr) {
-		const size_t len = strlen(optarg);
-		if (len <= sizeof(inputFilename)) {
-			strncpy(inputFilename, optarg, len);
-			bBinaryToFile = true;
-		}
-	}
+    
+    bDumpToFile = dumpToFile;
+    if (optarg != NULL) {
+        const size_t len = strlen(optarg);
+        if (len <= sizeof(inputFilename)) {
+            strncpy(inputFilename, optarg, len);
+            bBinaryToFile = true;
+        }
+    }
 
-	size_t reportLength = sizeof(IOGDiagnose);
+    size_t reportLength = sizeof(IOGDiagnose);
     report = (IOGDiagnose *)malloc(reportLength);
     if (NULL != report) {
         const char *error = NULL;
         kr = iogDiagnose(report,
                          reportLength,
-                         IOGRAPHICS_DIAGNOSE_VERSION,
+                         DarwinMajorVersion() < 18
+                         ? 5 // 10.13.4 to 10.13.6
+                         : IOGRAPHICS_DIAGNOSE_VERSION, // 10.14 to 10.14.3
                          &error);
         if (kIOReturnSuccess != kr) {
             fprintf(stderr, "%s %s (%#x)\n",

@@ -9,12 +9,32 @@
 #ifndef IOGraphicsDiagnose_h
 #define IOGraphicsDiagnose_h
 
+#if defined(IOGD530_14)
+#include "GTraceTypes.h"
+
+#define IOGRAPHICS_DIAGNOSE_VERSION             6
+#else
 #define IOGRAPHICS_DIAGNOSE_VERSION             9
+#endif
 
 #define IOGRAPHICS_MAXIMUM_REPORTS              16
+#if !defined(IOGD530_14)
 #define IOGRAPHICS_MAXIMUM_FBS                  96
+#else
+#define IOGRAPHICS_TOKENBUFFERSIZE              (kGTraceMaximumLineCount * (sizeof(sGTrace) / sizeof(uint64_t))) // ensure >= kGTraceMaximumLineCount
 
 
+// Client Interfaces
+#define kIOGSharedInterface_IOGDiagnose         0
+#define kIOGSharedInterface_ReservedB           1
+#define kIOGSharedInterface_ReservedC           2
+#define kIOGSharedInterface_ReservedD           3
+#define kIOGSharedInterface_ReservedE           4
+
+#define IONotify _ionotify
+#define IOGReport _iogreport
+#define IOGDiagnose _iogdiagnose
+#endif
 
 // stateBits
 #define kIOGReportState_Opened                  (1 << 0)
@@ -109,17 +129,25 @@ typedef struct IOGReport {
     uint32_t        workloopGatedCount;
 
     char            objectName[64];
+#if defined(IOGD530_14) || defined(IOGD530_66) || defined(IOGD576_1)
+    char            framebufferName[8];
+#else
     char            framebufferName[64];
+#endif
 
     IONotify        notifications[IOGRAPHICS_MAXIMUM_REPORTS];
 
     uint32_t        lastSuccessfulMode;
     uint32_t        aliasID;
 
+#if defined(IOGD530_14)
+    uint64_t        reservedC[15];
+#else
     uint32_t        lastWSAAStatus;
 
     uint32_t        reservedA;
     uint64_t        reservedB[14];
+#endif
 } IOGReport;
 
 typedef struct IOGDiagnose {
@@ -128,11 +156,24 @@ typedef struct IOGDiagnose {
     uint64_t        framebufferCount;
 
     uint32_t        length;
+#if defined(IOGD530_14)
+    uint32_t        _reservedA;
+    IOGReport       fbState[IOGRAPHICS_MAXIMUM_REPORTS];
+
+    uint32_t        _reservedB[8];
+
+    uint64_t        systemBootEpochTime;
+    uint32_t        tokenLine;
+    uint32_t        tokenLineCount;
+    uint32_t        tokenSize;
+    uint64_t        tokenBuffer[IOGRAPHICS_TOKENBUFFERSIZE];
+#else
     uint32_t        _reservedB[7];
 
     uint64_t        systemBootEpochTime;
 
     IOGReport       fbState[IOGRAPHICS_MAXIMUM_FBS];
+#endif
 } IOGDiagnose;
 #pragma pack(pop)
 

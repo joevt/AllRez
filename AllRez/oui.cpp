@@ -17,10 +17,21 @@ for thetype in oui cid; do
 done > "ouilist.h"
 */
 
+typedef struct ouiRec {
+	int val;
+	const char *name;
+} ouiRec;
+
+ouiRec ouiList[] = {
+	#define oneoui(val, name) {0x ## val, name},
+	#include "ouilist.h"
+};
+
 const char* convertoui(int oui) {
-	#define oneoui(val, name) case 0x ## val: return name;
-	switch(oui) {
-		#include "ouilist.h"
-		default: return "unknown";
+	for (int i = 0; i < sizeof(ouiList) / sizeof(ouiList[0]); i++) {
+		if (oui == ouiList[i].val) {
+			return ouiList[i].name;
+		}
 	}
+	return "Unknown OUI";
 }

@@ -5,6 +5,7 @@
 //  Created by joevt on 2022-02-19.
 //
 
+#include "AppleMisc.h"
 #include "vcp.h"
 #include "printf.h"
 #include "utilities.h"
@@ -39,7 +40,7 @@ typedef struct {
 	uint8_t checksum;
 } VCPFeatureReply;
 
-void ddcsetchecksum(IOI2CRequest *request) {
+void ddcsetchecksum(IOI2CRequest_10_6_0 *request) {
 	// request.sendBytes[1] = 0x80 + request.sendBytes - 3; // Length
 	UInt8 checksum = request->sendAddress;
 	for (int i = 0; i < request->sendBytes - 1; i++) {
@@ -48,7 +49,7 @@ void ddcsetchecksum(IOI2CRequest *request) {
 	((UInt8*)(request->sendBuffer))[request->sendBytes - 1] = checksum;
 } // ddcsetchecksum
 
-bool ddcreplyisgood(IOI2CRequest *request, bool hasSize, UInt8 sendAddress, UInt8 *replyBuffer, int expectedSize) {
+bool ddcreplyisgood(IOI2CRequest_10_6_0 *request, bool hasSize, UInt8 sendAddress, UInt8 *replyBuffer, int expectedSize) {
 	// zero length result: 6e80be
 	if (request->result)
 		return false;
@@ -86,7 +87,7 @@ long parsevcp(int level, char *vcps, IOI2CConnectRef i2cconnect, int val_IOI2CTr
 		}
 		if (*c == ')') {
 			if (level == 0) {
-				iprintf("(unexpected closing parenthesis at %ld)\n", c - vcps);
+				iprintf("(unexpected closing parenthesis at %d)\n", (int)(c - vcps));
 			}
 			return c - vcps + 1;
 		}
@@ -158,14 +159,14 @@ long parsevcp(int level, char *vcps, IOI2CConnectRef i2cconnect, int val_IOI2CTr
 						if (!plen) break;
 						b = 0;
 						if (!sscanf(p, "%X", &b)) {
-							errptr += snprintf(errptr, sizeof(errors) - (errptr - errors), "(parse error at %ld) ", p - vcps);
+							errptr += snprintf(errptr, sizeof(errors) - (errptr - errors), "(parse error at %d) ", (int)(p - vcps));
 						}
 						if (caplen < sizeof(cap)) {
 							cap[caplen] = b;
 							caplen++;
 						}
 						else {
-							errptr += snprintf(errptr, sizeof(errors) - (errptr - errors), "(too many capability bytes at %ld) ", p - vcps);
+							errptr += snprintf(errptr, sizeof(errors) - (errptr - errors), "(too many capability bytes at %d) ", (int)(p - vcps));
 						}
 					} // while vcp capabilities string
 					if (*c) c++;
@@ -196,7 +197,7 @@ long parsevcp(int level, char *vcps, IOI2CConnectRef i2cconnect, int val_IOI2CTr
 				bzero(&featureReply, sizeof(featureReply));
 				
 				if (vcpdirection == kVCPDirectionRO || vcpdirection == kVCPDirectionRW) {
-					IOI2CRequest request;
+					IOI2CRequest_10_6_0 request;
 					IOReturn result = kIOReturnSuccess;
 					bool ddcReplyIsBad = false;
 
@@ -215,12 +216,12 @@ long parsevcp(int level, char *vcps, IOI2CConnectRef i2cconnect, int val_IOI2CTr
 								vcpcode,
 								0x00, // Checksum
 							};
-							request.sendBytes = sizeof(senddata);
+							request.sendBytes = (uint32_t)sizeof(senddata);
 							request.sendBuffer = (vm_address_t)senddata;
 							ddcsetchecksum(&request);
 
 							if (FORCEI2C || !(val_IOI2CTransactionTypes & (1 << kIOI2CDDCciReplyTransactionType))) {
-								result = IOI2CSendRequest(i2cconnect, kNilOptions, &request);
+								result = UniversalI2CSendRequest(i2cconnect, kNilOptions, &request);
 								usleep(kDelayDDCFeatureRequest);
 								if (result) {
 									continue;
@@ -234,9 +235,9 @@ long parsevcp(int level, char *vcps, IOI2CConnectRef i2cconnect, int val_IOI2CTr
 							}
 
 							request.replyAddress = 0x6F; // Source address (DDC/CI)
-							request.replyBytes = sizeof(featureReply);
+							request.replyBytes = (uint32_t)sizeof(featureReply);
 							request.replyBuffer = (vm_address_t)&featureReply;
-							result = IOI2CSendRequest(i2cconnect, kNilOptions, &request);
+							result = UniversalI2CSendRequest(i2cconnect, kNilOptions, &request);
 							usleep(kDelayDDCFeatureReply);
 
 							if (result) {
@@ -244,7 +245,7 @@ long parsevcp(int level, char *vcps, IOI2CConnectRef i2cconnect, int val_IOI2CTr
 							}
 							else {
 								hasFeatureReply = true;
-								if (!ddcreplyisgood(&request, true, 0x6e, (UInt8*)&featureReply, sizeof(featureReply))
+								if (!ddcreplyisgood(&request, true, 0x6e, (UInt8*)&featureReply, (int)sizeof(featureReply))
 									|| featureReply.vcpFeatureReplyOpcode != 0x02
 									|| featureReply.resultCode != 0x00
 									|| featureReply.vcpOpcode != vcpcode

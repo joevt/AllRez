@@ -90,7 +90,7 @@ extern char **environ;
 #include <spawn.h>
 #include <sys/wait.h>
 
-#include "iokit"
+#include "iokit.h"
 
 #include "IOGraphicsDiagnose.h"
 #include "IOGDiagnoseUtils.hpp"
@@ -109,16 +109,27 @@ extern char **environ;
 
 #define ENABLE_TELEMETRY 1
 //#define __APPLE_API_UNSTABLE
+
+#define __kernel_data_semantics
+
+#ifndef __options_decl
+#define __options_decl(newtype, oldtype, enums...) \
+typedef enum : oldtype enums __attribute__((__enum_extensibility__(open))) __attribute__((__flag_enum__)) newtype
+#endif
+
+#ifndef __kpi_deprecated
+#define __kpi_deprecated(x)
+#endif
+
 #include <sys/kdebug_private.h>
 #include <sys/kdebug_kernel.h>
 #include <sys/kdebug.h>
+
+#if !defined(IOGD576_1)
 unsigned int kdebug_enable = -1;
 void kernel_debug(uint32_t debugid, uintptr_t arg1, uintptr_t arg2,
 				  uintptr_t arg3, uintptr_t arg4, uintptr_t arg5) {}
-
-
-int x = DBG_MACH_IPC;
-
+#endif
 
 #include "IOGraphicsKTrace.h"
 #include "utilities.h"
@@ -227,8 +238,6 @@ int entrycompare(const void *entry1, const void *entry2) {
 	return 0;
 }
 
-#define DBG_IOG_SOURCE_SERVER_ACK_TIMEOUT        35
-#define DBG_IOG_SOURCE_DIMENGINE_36              36
 #define DBG_IOG_SOURCE_DIMENGINE_37              37
 #define DBG_IOG_SOURCE_INIT_FB                   38
 
@@ -280,7 +289,7 @@ const char *GetGTraceSourceStr(char *buf, int bufsize, uint64_t src) {
 		case DBG_IOG_SOURCE_UPDATE_ONLINE             /* 33 */ : str = "UPDATE_ONLINE"; break;
 		case DBG_IOG_SOURCE_GLOBAL_CONNECTION_COUNT   /* 34 */ : str = "GLOBAL_CONNECTION_COUNT"; break;
 		case DBG_IOG_SOURCE_SERVER_ACK_TIMEOUT        /* 35 */ : str = "SERVER_ACK_TIMEOUT"; break;
-		case DBG_IOG_SOURCE_DIMENGINE_36              /* 36 */ : str = "?DIMENGINE_36"; break;
+		case DBG_IOG_SOURCE_DIM_DISPLAY_TIMEOUT       /* 36 */ : str = "?DIM_DISPLAY_TIMEOUT"; break;
 		case DBG_IOG_SOURCE_DIMENGINE_37              /* 37 */ : str = "?DIMENGINE_37"; break;
 		case DBG_IOG_SOURCE_INIT_FB                   /* 38 */ : str = "INIT_FB"; break;
 
@@ -443,8 +452,8 @@ const char *GetNotifyServerMessageStr(char *buf, int bufsize, uint64_t val) {
 	
 	if ((val & 0x0ffffffff) == kIOFBNS_Rendezvous)
 		snprintf(buf, bufsize, "Rendezvous%s%s",
-			val & 0xffffffff00000000 ? " " : "",
-			val & 0xffffffff00000000 ? UNKNOWN_VALUE(val & 0xffffffff00000000) : ""
+			val & 0xffffffff00000000ULL ? " " : "",
+			val & 0xffffffff00000000ULL ? UNKNOWN_VALUE(val & 0xffffffff00000000ULL) : ""
 		);
 	else {
 		snprintf(buf, bufsize, "Message:%s DisplayState:%s Generation:%lld%s%s",
@@ -457,8 +466,8 @@ const char *GetNotifyServerMessageStr(char *buf, int bufsize, uint64_t val) {
 		
 			(val & kIOFBNS_GenerationMask) >> kIOFBNS_GenerationShift,
 			
-			val & 0xffffffff8000f0f0 ? " " : "",
-			val & 0xffffffff8000f0f0 ? UNKNOWN_VALUE(val & 0xffffffff8000f0f0) : ""
+			val & 0xffffffff8000f0f0ULL ? " " : "",
+			val & 0xffffffff8000f0f0ULL ? UNKNOWN_VALUE(val & 0xffffffff8000f0f0ULL) : ""
 		);
 	}
 	return str;
@@ -488,8 +497,8 @@ const char *GetWSAAStr(char *buf, int bufsize, uint64_t val) {
 		val & kIOWSAA_DeferStart       ? "DeferStart," : "",
 		val & kIOWSAA_DeferEnd         ? "DeferEnd," : "",
 		val & kIOWSAA_NonConsoleDevice ? "NonConsoleDevice," : "",
-		val & 0xfffffffffffff8e0 ? UNKNOWN_VALUE(val & 0xfffffffffffff8e0) : "",
-		val & 0xfffffffffffff8e0 ? "," : ""
+		val & 0xfffffffffffff8e0ULL ? UNKNOWN_VALUE(val & 0xfffffffffffff8e0ULL) : "",
+		val & 0xfffffffffffff8e0ULL ? "," : ""
 	);
 	buf[inc-1] = '\0';
 	return str;
@@ -518,7 +527,7 @@ const char *GetSystemCapabilityStr(char *buf, int bufsize, uint64_t val) {
 }
 
 const char *DumpOneReturn32(char *buf, int bufsize, uint64_t val) {
-	if ((val & 0xffffffff00000000) == 0x8000000000000000) {
+	if ((val & 0xffffffff00000000ULL) == 0x8000000000000000ULL) {
 		return DumpOneReturn(buf, bufsize, (int32_t)val);
 	}
 	snprintf(buf, bufsize, "?0x%llx", val);
@@ -577,7 +586,6 @@ const char *GetClamshellStateStr(char *buf, int bufsize, uint64_t val) {
 
 const char *GetPMStr(char *buf, int bufsize, uint64_t val) {
 	const char *str = buf;
-	char stateStr[20];
 	int inc = snprintf(buf, bufsize, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
 		val & kIOPMSleepNow             ? "SleepNow," : "",
 		val & kIOPMAllowSleep           ? "AllowSleep," : "",
@@ -594,8 +602,8 @@ const char *GetPMStr(char *buf, int bufsize, uint64_t val) {
 		val & kIOPMPowerButtonUp        ? "PowerButtonUp," : "",
 		val & kIOPMProModeEngaged       ? "ProModeEngaged," : "",
 		val & kIOPMProModeDisengaged    ? "ProModeDisengaged," : "",
-		val & 0xffffffffffffc000 ? UNKNOWN_VALUE(val & 0xffffffffffffc000) : "",
-		val & 0xffffffffffffc000 ? "," : ""
+		val & 0xffffffffffffc000ULL ? UNKNOWN_VALUE(val & 0xffffffffffffc000ULL) : "",
+		val & 0xffffffffffffc000ULL ? "," : ""
 	);
 	buf[inc-1] = '\0';
 	return str;
@@ -649,8 +657,8 @@ const char *GetBitsStr(char *buf, int bufsize, uint64_t val) {
 		(val & (1ULL << 3)) ? "true" : "false",
 		(val & (1ULL << 4)) ? "true" : "false",
 		(val & (1ULL << 5)) ? "true" : "false",
-		(val & 0xffffffffffffffc0) ? " Unknown:" : "",
-		(val & 0xffffffffffffffc0) ? UNKNOWN_VALUE(val & 0xffffffffffffffc0) : ""
+		(val & 0xffffffffffffffc0ULL) ? " Unknown:" : "",
+		(val & 0xffffffffffffffc0ULL) ? UNKNOWN_VALUE(val & 0xffffffffffffffc0ULL) : ""
 	);
 	return str;
 }
@@ -665,8 +673,8 @@ const char *GetStateStr(char *buf, int bufsize, uint64_t val) {
 		(val & (1ULL << 4)) ? "true" : "false",
 		(val & (1ULL << 5)) ? "true" : "false",
 		(val & (1ULL << 6)) ? "true" : "false",
-		(val & 0xffffffffffffff80) ? " Unknown:" : "",
-		(val & 0xffffffffffffff80) ? UNKNOWN_VALUE(val & 0xffffffffffffff80) : ""
+		(val & 0xffffffffffffff80ULL) ? " Unknown:" : "",
+		(val & 0xffffffffffffff80ULL) ? UNKNOWN_VALUE(val & 0xffffffffffffff80ULL) : ""
 	);
 	return str;
 }
@@ -677,11 +685,15 @@ const char *GetCountsStr(char *buf, int bufsize, uint64_t val) {
 		GUNPACKUINT8T(2, val),
 		GUNPACKUINT8T(1, val),
 		GUNPACKUINT8T(0, val),
-		(val & 0xffffffffff000000) ? " Unknown:" : "",
-		(val & 0xffffffffff000000) ? UNKNOWN_VALUE(val & 0xffffffffff000000) : ""
+		(val & 0xffffffffff000000ULL) ? " Unknown:" : "",
+		(val & 0xffffffffff000000ULL) ? UNKNOWN_VALUE(val & 0xffffffffff000000ULL) : ""
 	);
 	return str;
 }
+
+#ifndef kPERefreshBootGraphics
+#define kPERefreshBootGraphics  9
+#endif
 
 const char *GetOpStr(char *buf, int bufsize, uint64_t val) {
 	const char *str;
@@ -937,7 +949,7 @@ const char *GetEntryString(char *buf, int bufsize, const GTraceEntry& entry, int
 			IOG_KTRACE_NT(DBG_IOG_PROCESS_CONNECT_CHANGE (46), DBG_FUNC_END (2), __private->regID, 0, __private->online, 0);
 		__ZN13IOFramebuffer16matchFramebufferEv == IOFramebuffer::matchFramebuffer() + 0x1a0
 		__ZN13IOFramebuffer16matchFramebufferEv == IOFramebuffer::matchFramebuffer() + 0x219
-			GTraceBuffer::formatToken(&var_80, rbx, 8180, 0x464, 0x1, 0x0, r13, 0x0, 0xffffffffc0000000, 0x0, sign_extend_64(r14), rax);
+			GTraceBuffer::formatToken(&var_80, rbx, 8180, 0x464, 0x1, 0x0, r13, 0x0, 0xffffffffc0000000ULL, 0x0, sign_extend_64(r14), rax);
 			IOG_KTRACE(DBG_IOG_SET_DISPLAY_MODE, DBG_FUNC_START, 0, DBG_IOG_SOURCE_MATCH_FRAMEBUFFER, 0, __private->regID, 0, mode, 0, depth);
 			GTraceBuffer::formatToken(&var_80, r12, 8185, 0x864, 0x1, 0x0, var_38, 0x0, sign_extend_64(r13), 0x0, 0x0, rax);
 			IOG_KTRACE(DBG_IOG_SET_DISPLAY_MODE, DBG_FUNC_END, 0, DBG_IOG_SOURCE_MATCH_FRAMEBUFFER, 0, __private->regID, 0, err, 0, 0);
@@ -1026,19 +1038,19 @@ const char *GetEntryString(char *buf, int bufsize, const GTraceEntry& entry, int
 			IOG_KTRACE_LOG_SYNCH(DBG_IOG_LOG_SYNCH);
 			GTraceBuffer::formatToken(&var_88, rbx, 8791, 0x411, r13, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, rax);
 			IOG_KTRACE(DBG_IOG_SYSTEM_POWER_CHANGE, DBG_FUNC_START, 0, messageType, 0, 0, 0, 0, 0, 0);
-			GTraceBuffer::formatToken(&var_88, rbx, 8899, 0x811, 0xffffffffe0000340, 0x0, r13, r14, r15, r14, r12, rax);
+			GTraceBuffer::formatToken(&var_88, rbx, 8899, 0x811, 0xffffffffe0000340ULL, 0x0, r13, r14, r15, r14, r12, rax);
 			IOG_KTRACE(DBG_IOG_SYSTEM_POWER_CHANGE, DBG_FUNC_END, 0, messageType, 0, params->fromCapabilities, 0, params->toCapabilities, 0, params->changeFlags);
 			GTraceBuffer::formatToken(&var_88, rbx, 8921, 27, 3, 0x0, 0x40, 0x0, 0x0, 0x0, 0x0, rax);
 			IOG_KTRACE(DBG_IOG_RECEIVE_POWER_NOTIFICATION, DBG_FUNC_NONE, 0, DBG_IOG_PWR_EVENT_SYSTEMPWRCHANGE (3), 0, kIOPMDisableClamshell, 0, 0, 0, 0);
-			GTraceBuffer::formatToken(&var_88, rbx, 8943, 0x811, 0xffffffffe0000280, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, rax);
+			GTraceBuffer::formatToken(&var_88, rbx, 8943, 0x811, 0xffffffffe0000280ULL, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, rax);
 			IOG_KTRACE(DBG_IOG_SYSTEM_POWER_CHANGE, DBG_FUNC_END, 0, messageType, 0, ret, 0, 0, 0, 0);
-			GTraceBuffer::formatToken(&var_88, rbx, 8977, 0x811, 0xffffffffe0000320, 0x0, r14, r14, r14, r14, r14, rax);
+			GTraceBuffer::formatToken(&var_88, rbx, 8977, 0x811, 0xffffffffe0000320ULL, 0x0, r14, r14, r14, r14, r14, rax);
 			IOG_KTRACE(DBG_IOG_SYSTEM_POWER_CHANGE, DBG_FUNC_END, 0, messageType, 0, ret, 0, 0, 0, 0);
-			GTraceBuffer::formatToken(&var_88, rbx, 8995, 0x811, 0xffffffffe0000300, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, rax);
+			GTraceBuffer::formatToken(&var_88, rbx, 8995, 0x811, 0xffffffffe0000300ULL, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, rax);
 			IOG_KTRACE(DBG_IOG_SYSTEM_POWER_CHANGE, DBG_FUNC_END, 0, messageType, 0, ret, 0, 0, 0, 0);
 			GTraceBuffer::formatToken(&var_88, r12, 9031, 0x811, r13, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, rax);
 			IOG_KTRACE(DBG_IOG_SYSTEM_POWER_CHANGE, DBG_FUNC_END, 0, messageType, 0, ret, 0, 0, 0, 0);
-			GTraceBuffer::formatToken(&var_88, rbx, 9041, 0x811, r13, 0x0, 0xffffffffe00002c7, 0x0, 0x0, 0x0, 0x0, rax);
+			GTraceBuffer::formatToken(&var_88, rbx, 9041, 0x811, r13, 0x0, 0xffffffffe00002c7ULL, 0x0, 0x0, 0x0, 0x0, rax);
 			IOG_KTRACE(DBG_IOG_SYSTEM_POWER_CHANGE, DBG_FUNC_END, 0, messageType, 0, ret, 0, 0, 0, 0);
 		__ZN13IOFramebuffer10systemWorkEP8OSObjectP22IOInterruptEventSourcei == IOFramebuffer::systemWork(OSObject*, IOInterruptEventSource*, int) + 0x7f
 		__ZN13IOFramebuffer10systemWorkEP8OSObjectP22IOInterruptEventSourcei == IOFramebuffer::systemWork(OSObject*, IOInterruptEventSource*, int) + 0x1b0
@@ -1271,27 +1283,27 @@ const char *GetEntryString(char *buf, int bufsize, const GTraceEntry& entry, int
 	__ZN16IODisplayConnect17recordGTraceTokenEttytytyty == IODisplayConnect::recordGTraceToken(unsigned short, unsigned short, unsigned long long, unsigned short, unsigned long long, unsigned short, unsigned long long, unsigned short, unsigned long long) + 0x5c
 		__ZN9IODisplay12setParameterEP12OSDictionaryPK8OSSymboli == IODisplay::setParameter(OSDictionary*, OSSymbol const*, int) + 0x38d
 			(line {1451,261}, {1455,261}, {1458,256}, {1461,256}, {1464,264}, {1467,260}) IODisplayConnect::recordGTraceToken(rdi, rsi, rdx, 0x0, r8, 0x2000, stack[-120], 0x2000, stack[-104]);
-			(line 1451,261) if (gIODisplayBrightnessProbeKey       == paramName) staticABL_GT_SET_BRIGHTNESS_PROBE(params, ABL_SOURCE_IOD_SETPARAMETER, value, -1, /* isLin */ false);        // a1 = 0x____ffff00000200 | r13 << 48;
-			(line 1455,261) if (gIODisplayLinearBrightnessProbeKey == paramName) staticABL_GT_SET_BRIGHTNESS_PROBE(params, ABL_SOURCE_IOD_SETPARAMETER, -1, value, /* isLin */ true);         // a1 = 0xffff____80000200 | r13 << 32;
-			(line 1458,256) if (gIODisplayBrightnessKey            == paramName) staticABL_GT_SET_BRIGHTNESS      (params, ABL_SOURCE_IOD_SETPARAMETER, value, -1, /* isLin */ false);        // a1 = 0x____ffff00000200 | r13 << 48;
-			(line 1461,256) if (gIODisplayLinearBrightnessKey      == paramName) staticABL_GT_SET_BRIGHTNESS      (params, ABL_SOURCE_IOD_SETPARAMETER, -1, value, /* isLin */ true);         // a1 = 0xffff____80000200 | r13 << 32;
-			(line 1464,264) if (gIODisplayParametersCommitKey      == paramName) staticABL_GT_COMMITTED           (params, ABL_SOURCE_IOD_SETPARAMETER, -1, /*nvram*/false, /*setup*/ false); // a1 = 0xffff000000000200
-			(line 1467,260) if (gIODisplayPowerStateKey            == paramName) staticABL_GT_SET_DISPLAY_POWER   (params, ABL_SOURCE_IOD_SETPARAMETER, value, -1, -1);                       // a1 = 0xffff0000ff__0200 | r13 << 16;
+			(line 1451,261) if (gIODisplayBrightnessProbeKey       == paramName) staticABL_GT_SET_BRIGHTNESS_PROBE(params, ABL_SOURCE_IOD_SETPARAMETER, value, -1, /* isLin */ false);        // a1 = 0x____ffff00000200ULL | r13 << 48;
+			(line 1455,261) if (gIODisplayLinearBrightnessProbeKey == paramName) staticABL_GT_SET_BRIGHTNESS_PROBE(params, ABL_SOURCE_IOD_SETPARAMETER, -1, value, /* isLin */ true);         // a1 = 0xffff____80000200ULL | r13 << 32;
+			(line 1458,256) if (gIODisplayBrightnessKey            == paramName) staticABL_GT_SET_BRIGHTNESS      (params, ABL_SOURCE_IOD_SETPARAMETER, value, -1, /* isLin */ false);        // a1 = 0x____ffff00000200ULL | r13 << 48;
+			(line 1461,256) if (gIODisplayLinearBrightnessKey      == paramName) staticABL_GT_SET_BRIGHTNESS      (params, ABL_SOURCE_IOD_SETPARAMETER, -1, value, /* isLin */ true);         // a1 = 0xffff____80000200ULL | r13 << 32;
+			(line 1464,264) if (gIODisplayParametersCommitKey      == paramName) staticABL_GT_COMMITTED           (params, ABL_SOURCE_IOD_SETPARAMETER, -1, /*nvram*/false, /*setup*/ false); // a1 = 0xffff000000000200ULL
+			(line 1467,260) if (gIODisplayPowerStateKey            == paramName) staticABL_GT_SET_DISPLAY_POWER   (params, ABL_SOURCE_IOD_SETPARAMETER, value, -1, -1);                       // a1 = 0xffff0000ff__0200ULL | r13 << 16;
 	__ZN16IODisplayConnect17recordGTraceTokenEtthtytyty == IODisplayConnect::recordGTraceToken(unsigned short, unsigned short, unsigned char, unsigned short, unsigned long long, unsigned short, unsigned long long, unsigned short, unsigned long long) + 0x45
 		__ZN9IODisplay19addParameterHandlerEP25IODisplayParameterHandler == IODisplay::addParameterHandler(IODisplayParameterHandler*) + 0x92
 			(line 852,263) IODisplayConnect::recordGTraceToken(*(r15 + 0x88), 852, 263, 0x0, 0x0, r9, 0, 0, 0);
-			ABL_GT_SET_DISPLAY(this, ABL_SOURCE_IOD_ADDPARAMETERHANDLER, -1, isBuiltin, false); // a1 = 0xffff000040000100
-                                                                                                // a1 = 0xffff000000000100
+			ABL_GT_SET_DISPLAY(this, ABL_SOURCE_IOD_ADDPARAMETERHANDLER, -1, isBuiltin, false); // a1 = 0xffff000040000100ULL
+                                                                                                // a1 = 0xffff000000000100ULL
 		__ZN9IODisplay12doIntegerSetEP12OSDictionaryPK8OSSymbolj == IODisplay::doIntegerSet(OSDictionary*, OSSymbol const*, unsigned int) + 0x256
 			(line {1571,261}, {1574,261}, {1577,256}, {1580,256}, {1583,264}, {1586,260}) IODisplayConnect::recordGTraceToken(rdi, rsi, rdx, 0x0, 0x0, r9, rax, stack[-112], stack[-104]);
-			(line 1571,261) if (gIODisplayBrightnessProbeKey       == paramName)       ABL_GT_SET_BRIGHTNESS_PROBE(this, ABL_SOURCE_IOD_DOINTEGERSET, value, -1, /* isLin */ false);          // a1 = 0x____ffff00000300 | r14 << 48;
-			(line 1574,261) if (gIODisplayLinearBrightnessProbeKey == paramName)       ABL_GT_SET_BRIGHTNESS_PROBE(this, ABL_SOURCE_IOD_DOINTEGERSET, -1, value, /* isLin */ true);           // a1 = 0xffff____80000300 | r14 << 32;
-			(line 1577,256) if (gIODisplayBrightnessKey            == paramName)       ABL_GT_SET_BRIGHTNESS      (this, ABL_SOURCE_IOD_DOINTEGERSET, value, -1, /* isLin */ false);          // a1 = 0x____ffff00000300 | r14 << 48;
-			(line 1580,256) if (gIODisplayLinearBrightnessKey      == paramName)       ABL_GT_SET_BRIGHTNESS      (this, ABL_SOURCE_IOD_DOINTEGERSET, -1, value, /* isLin */ true);           // a1 = 0xffff____80000300 | r14 << 32;
-			(line 1583,264) if (gIODisplayParametersCommitKey      == paramName)       ABL_GT_COMMITTED           (this, ABL_SOURCE_IOD_DOINTEGERSET, -1, /*nvram*/false, /*setup*/ false);   // a1 = 0xffff000000000300
-			(line 1586,260) if (gIODisplayPowerStateKey            == paramName)       ABL_GT_SET_DISPLAY_POWER   (this, ABL_SOURCE_IOD_DOINTEGERSET, value, -1, -1);                         // a1 = 0xffff0000ff__0300 | r14 << 16;
+			(line 1571,261) if (gIODisplayBrightnessProbeKey       == paramName)       ABL_GT_SET_BRIGHTNESS_PROBE(this, ABL_SOURCE_IOD_DOINTEGERSET, value, -1, /* isLin */ false);          // a1 = 0x____ffff00000300ULL | r14 << 48;
+			(line 1574,261) if (gIODisplayLinearBrightnessProbeKey == paramName)       ABL_GT_SET_BRIGHTNESS_PROBE(this, ABL_SOURCE_IOD_DOINTEGERSET, -1, value, /* isLin */ true);           // a1 = 0xffff____80000300ULL | r14 << 32;
+			(line 1577,256) if (gIODisplayBrightnessKey            == paramName)       ABL_GT_SET_BRIGHTNESS      (this, ABL_SOURCE_IOD_DOINTEGERSET, value, -1, /* isLin */ false);          // a1 = 0x____ffff00000300ULL | r14 << 48;
+			(line 1580,256) if (gIODisplayLinearBrightnessKey      == paramName)       ABL_GT_SET_BRIGHTNESS      (this, ABL_SOURCE_IOD_DOINTEGERSET, -1, value, /* isLin */ true);           // a1 = 0xffff____80000300ULL | r14 << 32;
+			(line 1583,264) if (gIODisplayParametersCommitKey      == paramName)       ABL_GT_COMMITTED           (this, ABL_SOURCE_IOD_DOINTEGERSET, -1, /*nvram*/false, /*setup*/ false);   // a1 = 0xffff000000000300ULL
+			(line 1586,260) if (gIODisplayPowerStateKey            == paramName)       ABL_GT_SET_DISPLAY_POWER   (this, ABL_SOURCE_IOD_DOINTEGERSET, value, -1, -1);                         // a1 = 0xffff0000ff__0300ULL | r14 << 16;
 		__ZN9IODisplay8doUpdateEv == IODisplay::doUpdate() + 0x6a
-			(line 1656, 262) IODisplayConnect::recordGTraceToken(*(r14 + 0x88), 1656, 262, 0x0, 0x0, 0xffffffff00000400 | (r12 & 0xff) << 0x1f, 0x0, 0x0, 0x0);              // a1 = 0xffffffff00000400
+			(line 1656, 262) IODisplayConnect::recordGTraceToken(*(r14 + 0x88), 1656, 262, 0x0, 0x0, 0xffffffff00000400ULL | (r12 & 0xff) << 0x1f, 0x0, 0x0, 0x0);              // a1 = 0xffffffff00000400ULL
 			ABL_GT_DO_UPDATE(this, ABL_SOURCE_IOD_DOUPDATE, ok, /* update count */ -1);
 	__ZN9IODisplay17recordGTraceTokenEtthtytyty == IODisplay::recordGTraceToken(unsigned short, unsigned short, unsigned char, unsigned short, unsigned long long, unsigned short, unsigned long long, unsigned short, unsigned long long) + 0xc
 		none
@@ -1470,7 +1482,7 @@ void dumpTokenBuffer(FILE* outfile, const vector<GTraceBuffer>& gtraces)
 #define GTRACEARG_retrainc1                     do { tagzero; value = entry.arg64(arg); cprintf("fConnectChange:%#x fLastForceRetrain:%#x%s%s", GUNPACKUINT16T(0, value), GUNPACKUINT16T(1, value),  (value & ~0x0ffffffffLL) ? " " : "", (value & ~0x0ffffffffLL) ? UNKNOWN_VALUE(value) : ""); arg++; } while (0)
 #define GTRACEARG_retrainc2                     do { tagzero; value = entry.arg64(arg); cprintf("fOnlineMask:%#x isMuted:%s%s%s", GUNPACKUINT32T(0, value), GUNPACKBIT(63, value) ? "true" : "false", (value & ~0x80000000ffffffffLL) ? " " : "", (value & ~0x80000000ffffffffLL) ? UNKNOWN_VALUE(value) : ""); arg++; } while (0)
 #define GTRACEARG_workasync1                    do { tagzero; value = entry.arg64(arg); cprintf("fConnectChange:%#x lastProcessedChange:%#x fLastFinishedChange:%#x fPostWakeChange:%#x", GUNPACKUINT16T(0, value), GUNPACKUINT16T(1, value), GUNPACKUINT16T(2, value), GUNPACKUINT16T(3, value)); arg++; } while (0)
-#define GTRACEARG_workasync2                    do { tagzero; value = entry.arg64(arg); cprintf("isMuted:%s 1:%s fMuxNeedsBgOn:%s fMuxNeedsBgOff:%s%s%s", GUNPACKBIT(63, value) ? "true" : "false", GUNPACKBIT(62, value) ? "true" : "false", GUNPACKBIT(61, value) ? "true" : "false", GUNPACKBIT(60, value) ? "true" : "false", (value & ~0xf000000000000000) ? " " : "", (value & ~0xf000000000000000) ? UNKNOWN_VALUE(value) : ""); arg++; } while (0)
+#define GTRACEARG_workasync2                    do { tagzero; value = entry.arg64(arg); cprintf("isMuted:%s 1:%s fMuxNeedsBgOn:%s fMuxNeedsBgOff:%s%s%s", GUNPACKBIT(63, value) ? "true" : "false", GUNPACKBIT(62, value) ? "true" : "false", GUNPACKBIT(61, value) ? "true" : "false", GUNPACKBIT(60, value) ? "true" : "false", (value & ~0xf000000000000000ULL) ? " " : "", (value & ~0xf000000000000000ULL) ? UNKNOWN_VALUE(value) : ""); arg++; } while (0)
 #define GTRACEARG_endconnectc1                  do { tagzero; value = entry.arg64(arg); cprintf("messaged:%s fOnlineMask%#x%s%s", GUNPACKBIT(0, value) ? "true" : "false", GUNPACKUINT32T(1, value), (value & ~0xffffffff00000001LL) ? " " : "", (value & ~0xffffffff00000001LL) ? UNKNOWN_VALUE(value) : ""); arg++; } while (0)
 #define GTRACEARG_endconnectc2                  do { tagzero; value = entry.arg64(arg); cprintf("fConnectChange:%#x fLastMessagedChange:%#x fLastFinishedChange:%#x fPostWakeChange:%#x lastProcessedChange:%#x%s%s", GUNPACKUINT8T(0, value), GUNPACKUINT8T(1, value), GUNPACKUINT8T(2, value), GUNPACKUINT8T(3, value), GUNPACKUINT8T(4, value), (value & ~0x0ffffffffffLL) ? " " : "", (value & ~0x0ffffffffffLL) ? UNKNOWN_VALUE(value) : ""); arg++; } while (0)
 #define GTRACEARG_processconnecta1              do { tagzero; value = entry.arg64(arg); cprintf("msgd:%s isMuted:%s%s%s", GUNPACKBIT(0, value) ? "true" : "false", GUNPACKBIT(1, value) ? "true" : "false", (value & ~0x03LL) ? " " : "", (value & ~0x03LL) ? UNKNOWN_VALUE(value) : ""); arg++; } while (0)
@@ -1743,16 +1755,15 @@ void dumpGTraceReport(const IOGDiagnose& diag,
         diag.framebufferCount, IOGRAPHICS_MAXIMUM_FBS);
 
     fprintf(outfile, "Report version: %#llx\n", diag.version);
-	
 
 	char thenstr[100];
 	int64_t thenns = diag.systemBootEpochTime;
-	time_t thentime = thenns / 1000000000;
+	time_t thentime = (time_t)(thenns / 1000000000);
 	struct tm thentm;
 	localtime_r(&thentime, &thentm);
 	size_t len = strftime(thenstr, sizeof(thenstr), "%F %T", &thentm);
 	snprintf(thenstr + len, sizeof(thenstr) - len, ".%09lld", thenns % 1000000000);
-	
+
     fprintf(outfile, "Boot Epoch Time: %llu=%s\n", diag.systemBootEpochTime, thenstr);
     fprintf(outfile, "Number of framebuffers: %llu%s\n\n",
         diag.framebufferCount,

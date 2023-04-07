@@ -10,7 +10,8 @@
 
 #include <IOKit/IOKitLib.h>
 
-#define PACKED __attribute__((packed)) __attribute__((aligned(1)))
+#define UNALIGNED __attribute__((aligned(1)))
+#define PACKED __attribute__((packed)) UNALIGNED
 
 typedef uint64_t reginfo;
 
@@ -106,11 +107,15 @@ typedef struct {
 /*   0x38 */ uint64_t platformFlags;
 /*   0x40 */ uint64_t extraSupportFlags;
 /*   0x48 */ uint64_t wranglerFlags;
-/*   0x50 */ PACKED launcherinfo launcher[8];
-/*  0x238 */ PACKED gpuinfo gpu[8];
+/*   0x50 */ UNALIGNED launcherinfo launcher[8];
+/*  0x238 */ UNALIGNED gpuinfo gpu[8];
 /* 0x14c0 */ gtraceinfo gtrace;
 /* 0x74f8 */ // end
 } DisplayPolicyState;
+
+extern int assertx[(__builtin_offsetof(DisplayPolicyState, gpu) == 0x238) - 1];
+extern int assertx[(__builtin_offsetof(DisplayPolicyState, gtrace) == 0x14c0) - 1];
+extern int assertx[(sizeof(DisplayPolicyState) == 0x74f8) - 1];
 
 #ifdef __cplusplus
 extern "C" {

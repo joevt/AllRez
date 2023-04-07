@@ -23,6 +23,7 @@
 #ifndef _IOKIT_IOGRAPHICSTYPESPRIVATE_H
 #define _IOKIT_IOGRAPHICSTYPESPRIVATE_H
 
+#include "MacOSMacros.h"
 #include <IOKit/graphics/IOGraphicsTypes.h>
 
 enum {
@@ -100,12 +101,14 @@ enum {
     kIOCaptureDisableDisplayDimming     = 0x00000002
 };
 
+#if MAC_OS_X_VERSION_SDK >= MAC_OS_X_VERSION_10_6
 /*! @enum FramebufferConstants
     @constant kIOFBVRAMMemory The memory type for IOConnectMapMemory() to get the VRAM memory. Use a memory type equal to the IOPixelAperture index to get a particular pixel aperture.
 */
 enum {
     kIOFBVRAMMemory             = 110
 };
+#endif
 
 #define kIOFBGammaHeaderSizeKey         "IOFBGammaHeaderSize"
 
@@ -307,6 +310,7 @@ enum
 // Single source
 #define DBG_BUFFER_BRACKET                   9  // 0x09 0x5320024 reserved
 #define DBG_IOG_NOTIFY_SERVER               10  // 0x0A 0x5320028: arg1 regID, arg2 serverNotified
+//#define DBG_IOG_SERVER_ACK                  11  // 0x0B 0x532002C: arg1 regID, arg2 serverState // 530.66
 #define DBG_IOG_SERVER_ACK                  11  // 0x0B 0x532002C: arg1 msgh_id, arg2 regID, arg3 sendAckedPower, arg4 hidden
 #define DBG_IOG_VRAM_RESTORE                12	// 0x0C 0x5320030: arg1 regID
 #define DBG_IOG_VRAM_BLACK                  13	// 0x0D 0x5320034: arg1 regID
@@ -388,6 +392,8 @@ enum
 #define DBG_IOG_SOURCE_CLAMSHELL_OFFLINE_CHANGE     32
 #define DBG_IOG_SOURCE_UPDATE_ONLINE                33
 #define DBG_IOG_SOURCE_GLOBAL_CONNECTION_COUNT      34
+#define DBG_IOG_SOURCE_SERVER_ACK_TIMEOUT           35  // Power events
+#define DBG_IOG_SOURCE_DIM_DISPLAY_TIMEOUT          36
 
 // IOGraphics receive power notification event types
 #define DBG_IOG_PWR_EVENT_DESKTOPMODE               1

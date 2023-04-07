@@ -5,6 +5,8 @@
 //  Created by Jérémy Tran on 8/8/17.
 //
 
+#define IOGD530_14
+
 #include "IOGDiagnoseUtils.h"
 
 #include <string.h>
@@ -67,17 +69,22 @@ kern_return_t iogDiagnose(IOGDiagnose * reportP,
             }
             else
             {
-                uint64_t    scalerParams[] = {reportLength, version};
-                uint32_t    scalerParamsCount = (sizeof(scalerParams) / sizeof(scalerParams[0]));
-
                 bzero(reportP, reportLength);
 
                 reportP->version = version;
-                reportP->tokenSize = sizeof(reportP->tokenBuffer);
+                reportP->tokenSize = (uint32_t)sizeof(reportP->tokenBuffer);
 
-                err = IOConnectCallMethod(connect, kIOGSharedInterface_IOGDiagnose,
-                                         scalerParams, scalerParamsCount, NULL, 0,
-                                         NULL, NULL, reportP, &reportLength);
+#if MAC_OS_X_VERSION_SDK >= MAC_OS_X_VERSION_10_5
+                uint64_t    scalerParams[] = {reportLength, version};
+                uint32_t    scalerParamsCount = ((uint32_t)sizeof(scalerParams) / (uint32_t)sizeof(scalerParams[0]));
+
+                err = kIOReturnUnsupported;
+                API_OR_SDK_AVAILABLE_BEGIN(10.5, IOConnectCallMethod) {
+                    err = IOConnectCallMethod(connect, kIOGSharedInterface_IOGDiagnose,
+                                             scalerParams, scalerParamsCount, NULL, 0,
+                                             NULL, NULL, reportP, &reportLength);
+                } API_OR_SDK_AVAILABLE_END
+#endif
                 if (kIOReturnSuccess != err)
                 {
                     errstr = "IOGDiagnose failed";

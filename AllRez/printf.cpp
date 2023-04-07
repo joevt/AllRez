@@ -4,10 +4,27 @@
 //
 //  Created by joevt on 2022-02-19.
 //
+#include "MacOSMacros.h"
 #include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <regex.h>
+
 #include "printf.h"
 #include "AppleMisc.h"
 #include <IOKit/IOMessage.h>
+#include <CarbonCore/MacErrors.h>
+
+
+#if MAC_OS_X_VERSION_SDK < MAC_OS_X_VERSION_10_7
+#define kIOMessageConsoleSecurityChange    iokit_common_msg(0x128)
+#define kIOMessageSystemCapabilityChange   iokit_common_msg(0x340)
+#define kIOMessageDeviceSignaledWakeup     iokit_common_msg(0x350)
+#define kIOMessageSystemPagingOff          iokit_common_msg(0x255)
+#define kIOMessageDeviceWillPowerOn        iokit_common_msg(0x215)
+#define kIOMessageDeviceHasPoweredOff      iokit_common_msg(0x225)
+#endif
+
 
 int indent = 0;
 
@@ -38,8 +55,75 @@ void CFOutput(CFTypeRef val) {
 			char *strinfo = (char *)malloc(maxsize);
 			if (strinfo) {
 				if (CFStringGetCString(theinfo, strinfo, maxsize, kCFStringEncodingUTF8)) {
-					char *next;
 					char *s;
+					if (DarwinMajorVersion() < 19) { // earlier than 10.15
+						size_t l;
+						regmatch_t p[2];
+						int reti;
+						
+						regex_t regex;
+						
+						reti = regcomp(&regex, "<CFString 0x[[:xdigit:]]+ \\[0x[[:xdigit:]]+\\]>\\{contents = \"([^\"]*)\"\\}", REG_EXTENDED);
+						if (reti) {
+							cprintf("? Could not compile regex1");
+						}
+						else {
+							s = strinfo;
+							l = maxsize;
+							
+							while (1) {
+								reti = regexec(&regex, s, sizeof(p) / sizeof(p[0]), p, 0);
+								if (!reti) {
+									snprintf(s + p[0].rm_so, (size_t)(l - p[0].rm_so), "%.*s%s", (int)(p[1].rm_eo - p[1].rm_so), s + (size_t)p[1].rm_so, s + (size_t)p[0].rm_eo);
+									s += p[0].rm_so + p[1].rm_eo - p[1].rm_so;
+									l -= (size_t)(p[0].rm_so + p[1].rm_eo - p[1].rm_so);
+								}
+								else if (reti == REG_NOMATCH) {
+									break;
+								}
+								else {
+									char msgbuf[100];
+									regerror(reti, &regex, msgbuf, sizeof(msgbuf));
+									cprintf("? Regex1 match failed: %s", msgbuf);
+								}
+							}
+							regfree(&regex);
+						}
+						
+						reti = regcomp(&regex, "<CF[[:alpha:]]+ 0x[[:xdigit:]]+ \\[0x[[:xdigit:]]+\\]>", REG_EXTENDED);
+						if (reti) {
+							cprintf("? Could not compile regex2");
+						}
+						else {
+							s = strinfo;
+							l = maxsize;
+							
+							while (1) {
+								reti = regexec(&regex, s, sizeof(p) / sizeof(p[0]), p, 0);
+								if (!reti) {
+									snprintf(s + p[0].rm_so, l - (size_t)p[0].rm_so, "%s", s + (size_t)p[0].rm_eo);
+									s += p[0].rm_so;
+									l -= (int)p[0].rm_so;
+								}
+								else if (reti == REG_NOMATCH) {
+									break;
+								}
+								else {
+									char msgbuf[100];
+									regerror(reti, &regex, msgbuf, sizeof(msgbuf));
+									cprintf("? Regex2 match failed: %s", msgbuf);
+								}
+							}
+							regfree(&regex);
+						}
+					} // if earlier than 10.15
+
+					// Output each line with extra indent
+					char *next;
+					size_t len = strlen(strinfo);
+					if (len && strinfo[len-1] == '\n') {
+						strinfo[len-1] = '\0';
+					}
 					for (s = strinfo; ; s = next + 1) {
 						next = strstr(s, "\n");
 						if (!next) {

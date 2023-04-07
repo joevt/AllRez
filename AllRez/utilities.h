@@ -8,7 +8,13 @@
 #ifndef utilities_h
 #define utilities_h
 
-#include <MacTypes.h>
+#include "MacOSMacros.h"
+#if MAC_OS_X_VERSION_SDK < MAC_OS_X_VERSION_10_9
+#include <CarbonCore/MacTypes.h>
+#else
+#include <MacTypes.h> // from /usr/include
+#endif
+#include <stddef.h>
 #include <mach/mach_time.h>
 
 #ifdef __cplusplus

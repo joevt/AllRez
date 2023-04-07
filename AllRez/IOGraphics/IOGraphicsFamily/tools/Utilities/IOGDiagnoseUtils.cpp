@@ -7,14 +7,15 @@
 
 #include "IOGDiagnoseUtils.hpp"
 
-#include <cstdint>
+#include <stdint.h>
 #include <cstdio>
 #include <memory>
 
 #include <mach/mach_error.h>
 
 // Pick up local headers
-#include "IOGraphicsTypes.h"
+#include <IOKit/graphics/IOGraphicsTypes.h>
+#include "AppleMisc.h"
 
 #ifdef TARGET_CPU_X86_64
 
