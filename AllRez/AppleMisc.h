@@ -1139,7 +1139,7 @@ enum {
 
 
 #pragma pack(push, 4)
-struct IOI2CRequest_10_6_0
+struct IOI2CRequest_10_6
 {
 	IOOptionBits                sendTransactionType;
 	IOOptionBits                replyTransactionType;
@@ -1191,7 +1191,7 @@ struct IOI2CRequest_10_6_0
 
 #pragma pack(push, 4)
 
-struct IOI2CRequest_10_5_0_kernel // for 10.4 and 10.5 kernel
+struct IOI2CRequest_10_5_kernel_i386 // for 10.4 and 10.5 kernel
 {
 	UInt64              __reservedA;
 	IOReturn            result;
@@ -1211,16 +1211,36 @@ struct IOI2CRequest_10_5_0_kernel // for 10.4 and 10.5 kernel
 	uint32_t            replyBuffer;
 	uint32_t            replyBytes;
 	uint32_t            __reservedD[16];
-#if defined(__ppc__) || defined(__ppc64__)
+}; // 124 bytes
+
+struct IOI2CRequest_10_5_kernel_ppc // for 10.4 and 10.5 kernel
+{
+	UInt64              __reservedA;
+	IOReturn            result;
+	uint32_t            completion;
+	IOOptionBits        commFlags;
+	uint64_t            minReplyDelay;
+	uint8_t             sendAddress;
+	uint8_t             sendSubAddress;
+	uint8_t             __reservedB[2];
+	IOOptionBits        sendTransactionType;
+	uint32_t            sendBuffer;
+	uint32_t            sendBytes;
+	uint8_t             replyAddress;
+	uint8_t             replySubAddress;
+	uint8_t             __reservedC[2];
+	IOOptionBits        replyTransactionType;
+	uint32_t            replyBuffer;
+	uint32_t            replyBytes;
+	uint32_t            __reservedD[16];
 	uint32_t            __reservedE;
-#endif
-}; // 128 bytes on ppc, 124 bytes elsewhere
+}; // 128 bytes
 
 #pragma pack(pop)
 
 #pragma pack(push, 4)
 
-struct IOI2CRequest_10_5_0_user // for 10.4 and 10.5 user
+struct IOI2CRequest_10_5_user // for 10.4 and 10.5 user
 {
 	UInt64                  __reservedA;
 	IOReturn                result;
@@ -1246,14 +1266,21 @@ struct IOI2CRequest_10_5_0_user // for 10.4 and 10.5 user
 
 enum { kIOI2CInlineBufferBytes = 1024 };
 
-struct IOI2CBuffer
-{
-#ifdef __ppc64__
-	IOI2CRequest_10_5_0_kernel  request;
-#else
-	IOI2CRequest                request;
-#endif
-	UInt8                       inlineBuffer[ kIOI2CInlineBufferBytes ];
+struct IOI2CBuffer {
+	union {
+		struct {
+			IOI2CRequest                   request;
+			UInt8                          inlineBuffer[ kIOI2CInlineBufferBytes ];
+		} buf_def;
+		struct {
+			IOI2CRequest_10_5_kernel_ppc   request;
+			UInt8                          inlineBuffer[ kIOI2CInlineBufferBytes ];
+		} buf_ppc;
+		struct {
+			IOI2CRequest_10_5_kernel_i386  request;
+			UInt8                          inlineBuffer[ kIOI2CInlineBufferBytes ];
+		} buf_i386;
+	};
 };
 
 // https://github.com/robbertkl/ResolutionMenu/blob/master/Resolution%20Menu/DisplayModeMenuItem.m
@@ -1434,8 +1461,9 @@ IOConnectCallMethod(
 __attribute__((weak_import));
 #endif
 
-IOReturn UniversalI2CSendRequest( IOI2CConnectRef connect, IOOptionBits options, IOI2CRequest_10_6_0 * request );
+IOReturn UniversalI2CSendRequest( IOI2CConnectRef connect, IOOptionBits options, IOI2CRequest_10_6 * request );
 char * MacOSVersion();
+const char * MachineType();
 int DarwinMajorVersion();
 int DarwinMinorVersion();
 int DarwinRevision();

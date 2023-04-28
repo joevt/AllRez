@@ -35,6 +35,21 @@ if (!final) ConvertPointer((to)->sendBuffer, (from)->sendBuffer)   ; \
 (to)->sendTransactionType  = (from)->sendTransactionType           ; \
 } while (0)
 
+static char ghwmachine[20];
+
+const char * MachineType() {
+	if (!ghwmachine[0]) {
+		size_t data_len = sizeof(ghwmachine) - 1;
+		if (sysctlbyname("hw.machine", &ghwmachine, &data_len, NULL, 0)) {
+			snprintf(ghwmachine, sizeof(ghwmachine), "unknownArch");
+		}
+		else if (!strcmp(ghwmachine, "Power Macintosh")) {
+			snprintf(ghwmachine, sizeof(ghwmachine), "ppc");
+		}
+	}
+	return ghwmachine;
+}
+
 static int gDarwinMajorVersion = -1;
 static int gDarwinMinorVersion = 0;
 static int gDarwinRevision = 0;
@@ -102,55 +117,116 @@ char * MacOSVersion() {
 	return gMacOSVersion;
 }
 
-IOReturn UniversalI2CSendRequest( IOI2CConnectRef connect, IOOptionBits options, IOI2CRequest_10_6_0 * request )
+static IOReturn I2CSendRequest_10_5( IOI2CConnectRef connect, IOOptionBits options, IOI2CRequest_10_6 * request )
 {
 	kern_return_t kr;
-#if defined(__ppc64__)
-	// ppc64 can only run on Power Macs
-	// kernel on Power Macs is 32 bit
+
 	IOI2CBuffer buffer;
 
-	if( request->sendBytes > sizeof(buffer.inlineBuffer))
+	if( request->sendBytes > kIOI2CInlineBufferBytes)
 		return( kIOReturnOverrun );
-	if( request->replyBytes > sizeof(buffer.inlineBuffer))
+	if( request->replyBytes > kIOI2CInlineBufferBytes)
 		return( kIOReturnOverrun );
 
+	if (request->sendAddress > 255) {
+		return kIOReturnBadArgument;
+	}
+
+	if (request->replyAddress > 255) {
+		return kIOReturnBadArgument;
+	}
+
+	#if defined(__LP64__)
 	kr = IOConnectCallMethod(connect->connect, 0,       // Index
 				NULL,    0, NULL,    0,                 // Input
 				NULL, NULL, NULL, NULL);                // Output
+	#else
+	kr = IOConnectMethodScalarIScalarO( connect->connect, 0, 0, 0 );
+	#endif
 	if( kIOReturnSuccess != kr)
 		return( kr );
 
-	ConvertIOI2CRequest(request, &buffer.request, 0);
-	buffer.request.replyBuffer = 0;
-	buffer.request.sendBuffer  = 0;
+	void *inlineBuffer;
+	size_t len;
+	uint32_t *replyBytes;
+	
+	if (!strcmp(MachineType(), "i386")) {
+		ConvertIOI2CRequest(request, &buffer.buf_i386.request, 0);
+		buffer.buf_i386.request.replyBuffer = 0;
+		buffer.buf_i386.request.sendBuffer  = 0;
+		replyBytes = &buffer.buf_i386.request.replyBytes;
+		inlineBuffer = &buffer.buf_i386.inlineBuffer;
+		len = sizeof(buffer.buf_i386);
+	}
+	else if (!strcmp(MachineType(), "ppc")) {
+		ConvertIOI2CRequest(request, &buffer.buf_ppc.request, 0);
+		buffer.buf_ppc.request.replyBuffer = 0;
+		buffer.buf_ppc.request.sendBuffer  = 0;
+		replyBytes = &buffer.buf_i386.request.replyBytes;
+		inlineBuffer = &buffer.buf_ppc.inlineBuffer;
+		len = sizeof(buffer.buf_ppc);
+	}
+	else {
+		ConvertIOI2CRequest(request, &buffer.buf_def.request, 0);
+		buffer.buf_def.request.replyBuffer = 0;
+		buffer.buf_def.request.sendBuffer  = 0;
+		replyBytes = &buffer.buf_i386.request.replyBytes;
+		inlineBuffer = &buffer.buf_def.inlineBuffer;
+		len = sizeof(buffer.buf_def);
+	}
 
 	if( request->sendBytes)
-		bcopy( (void *) request->sendBuffer, &buffer.inlineBuffer[0], request->sendBytes );
+		bcopy( (void *) request->sendBuffer, inlineBuffer, request->sendBytes );
 
-	size_t len = sizeof( buffer);
+	#if defined(__LP64__)
 	kr = IOConnectCallMethod(connect->connect, 2,       // Index
 				NULL,    0, &buffer, len,               // Input
 				NULL, NULL, &buffer, &len);             // Output
+	#else
+	kr = IOConnectMethodStructureIStructureO(connect->connect, 2, // Index
+				len, &len, &buffer, &buffer);
+	#endif
 
-	if( buffer.request.replyBytes)
-		bcopy( &buffer.inlineBuffer[0], (void *)  request->replyBuffer, buffer.request.replyBytes );
-	ConvertIOI2CRequest(&buffer.request, request, 1);
+	if( *replyBytes)
+		bcopy( inlineBuffer, (void *)  request->replyBuffer, *replyBytes );
 
-	kr = IOConnectCallMethod(connect->connect, 1,       // Index
-				NULL,    0, NULL,    0,                 // Input
-				NULL, NULL, NULL, NULL);                // Output
-#else
+	if (!strcmp(MachineType(), "i386")) {
+		ConvertIOI2CRequest(&buffer.buf_i386.request, request, 1);
+	}
+	else if (!strcmp(MachineType(), "ppc")) {
+		ConvertIOI2CRequest(&buffer.buf_ppc.request, request, 1);
+	}
+	else {
+		ConvertIOI2CRequest(&buffer.buf_def.request, request, 1);
+	}
+
+	#if defined(__LP64__)
+	IOConnectCallMethod(connect->connect, 1,       // Index
+				NULL,    0, NULL,    0,            // Input
+				NULL, NULL, NULL, NULL);           // Output
+	#else
+	IOConnectMethodScalarIScalarO( connect->connect, 1, 0, 0 );
+	#endif
+
+	return kr;
+}
+
+IOReturn UniversalI2CSendRequest( IOI2CConnectRef connect, IOOptionBits options, IOI2CRequest_10_6 * request )
+{
+	kern_return_t kr;
 	if (DarwinMajorVersion() <= 9) { // 10.5
-		IOI2CRequest_10_5_0_user request_10_5_0;
-		ConvertIOI2CRequest(request, &request_10_5_0, 0);
-		kr = IOI2CSendRequest(connect, options, (IOI2CRequest*)&request_10_5_0);
-		ConvertIOI2CRequest(&request_10_5_0, request, 1);
+		#if 1
+			kr = I2CSendRequest_10_5(connect, options, request);
+		#else
+			IOI2CRequest_10_5_0_user request_10_5_0;
+			ConvertIOI2CRequest(request, &request_10_5_0, 0);
+			kr = IOI2CSendRequest(connect, options, (IOI2CRequest*)&request_10_5_0);
+			ConvertIOI2CRequest(&request_10_5_0, request, 1);
+		#endif
 	}
 	else {
 		kr = IOI2CSendRequest(connect, options, (IOI2CRequest*)request);
 	}
-#endif
 	return kr;
 }
 

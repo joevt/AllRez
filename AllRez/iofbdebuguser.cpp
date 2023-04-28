@@ -50,7 +50,7 @@ IOReturn IoFbDoRequest(io_service_t ioFramebufferService, UInt8 *sendBuf, UInt32
 								if (KERN_SUCCESS == result) {
 									
 									if (val_IOI2CTransactionTypes & (1 << kIOI2CSimpleTransactionType)) {
-										IOI2CRequest_10_6_0 request;
+										IOI2CRequest_10_6 request;
 										bzero(&request, sizeof(request));
 										request.sendTransactionType = kIOI2CSimpleTransactionType;
 										request.sendAddress = 0xfb;
@@ -198,10 +198,10 @@ void IofbSetControllerColorModeAndDepth(int displayIndex, UInt32 mode, UInt32 de
 void DoAttributeTest(int displayIndex) {
 	if (IofbAvailable(displayIndex)) {
 		// works on iMac14,2 (NVIDIA GeForce GTX 780M 4 GB) but not MacPro3,1 (NVIDIA GeForce GTX 680 2 GB). The driver accepts the attributes but doesn't update the display.
+		IofbSetControllerColorModeAndDepth(displayIndex, kIODisplayColorModeRGB     , kIODisplayRGBColorComponentBits10    ); // 30 bpp (default color depth for Nvidia Kepler)
+		IofbSetControllerColorModeAndDepth(displayIndex, kIODisplayColorModeRGB     , kIODisplayRGBColorComponentBits8     ); // 24 bpp
+		IofbSetControllerColorModeAndDepth(displayIndex, kIODisplayColorModeRGB     , kIODisplayRGBColorComponentBits6     ); // 18 bpp (low color depth = banding)
 		IofbSetControllerColorModeAndDepth(displayIndex, kIODisplayColorModeYCbCr422, kIODisplayYCbCr422ColorComponentBits8); // 16 bpp (4:2:2 chroma subsampling = low horizontal color resolution)
-		//	IofbSetControllerColorModeAndDepth(displayIndex, kIODisplayColorModeRGB     , kIODisplayRGBColorComponentBits6     ); // 18 bpp (low color depth = banding)
-		//	IofbSetControllerColorModeAndDepth(displayIndex, kIODisplayColorModeRGB     , kIODisplayRGBColorComponentBits8     ); // 24 bpp
-		//	IofbSetControllerColorModeAndDepth(displayIndex, kIODisplayColorModeRGB     , kIODisplayRGBColorComponentBits10    ); // 30 bpp (default color depth for Nvidia Kepler)
 	}
 	else {
 		iprintf("Iofb is not available.\n");

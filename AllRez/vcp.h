@@ -45,8 +45,8 @@ extern "C" {
 
 #define FORCEI2C 1 // don't use kIOI2CDDCciReplyTransactionType because some drivers (for my GTX 680 in Monterey) may treat minReplyDelay of 6000 as 6 seconds instead of 6 milliseconds
 
-void ddcsetchecksum(IOI2CRequest_10_6_0 *request);
-bool ddcreplyisgood(IOI2CRequest_10_6_0 *request, bool hasSize, UInt8 sendAddress, UInt8 *replyBuffer, int expectedSize);
+void ddcsetchecksum(IOI2CRequest_10_6 *request);
+bool ddcreplyisgood(IOI2CRequest_10_6 *request, bool hasSize, UInt8 sendAddress, UInt8 *replyBuffer, int expectedSize);
 long parsevcp(int level, char *vcps, IOI2CConnectRef i2cconnect, int val_IOI2CTransactionTypes);
 
 #ifdef __cplusplus

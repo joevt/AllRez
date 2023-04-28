@@ -21,6 +21,8 @@ enum {
     kIOFBConnectIndex1 = 1,
 };
 
+bool IofbAvailable(int displayIndex);
+
 IOReturn IofbSetAttributeForService(io_service_t ioFramebufferService, UInt32 category, UInt32 val1, UInt32 val2, UInt32 val3, UInt32 *valGet);
 
 IOReturn IofbGetSetAttributeForDisplay(int displayIndex, UInt32 category, UInt32 val1, UInt32 val2, UInt32 val3, UInt32 *valGet);

@@ -806,7 +806,7 @@ bool mst_get_use_sideband_property(io_service_t ioFramebufferService)
 
 IOReturn dp_dpcd_read(IOI2CConnectRef i2cconnect, int dpcdAddr, int dpcdLength, void *dpcdDest) {
 	IOReturn result;
-	IOI2CRequest_10_6_0 sendrequest;
+	IOI2CRequest_10_6 sendrequest;
 	bzero(&sendrequest, sizeof(sendrequest));
 	bzero(dpcdDest, dpcdLength);
 	sendrequest.replyTransactionType = kIOI2CDisplayPortNativeTransactionType;
@@ -822,7 +822,7 @@ IOReturn dp_dpcd_read(IOI2CConnectRef i2cconnect, int dpcdAddr, int dpcdLength, 
 
 IOReturn dp_dpcd_write(IOI2CConnectRef i2cconnect, int dpcdAddr, int dpcdLength, void *dpcdSource) {
 	IOReturn result;
-	IOI2CRequest_10_6_0 sendrequest;
+	IOI2CRequest_10_6 sendrequest;
 	bzero(&sendrequest, sizeof(sendrequest));
 	sendrequest.sendTransactionType = kIOI2CDisplayPortNativeTransactionType;
 	sendrequest.sendAddress = dpcdAddr;

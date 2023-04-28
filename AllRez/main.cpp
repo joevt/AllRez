@@ -419,9 +419,9 @@ static char * DumpOneDetailedTimingInformationPtr(char * buf, size_t bufSize, vo
 			inc += scnprintf(buf+inc, bufSize-inc, " (errMHz ø,ø)");
 		}
 		else {
-			float minPixelClockErr  = ((SInt64)timing->minPixelClock - (SInt64)timing->pixelClock) / 1000000.0;
-			float minPixelClockErr2 = ((SInt32)timing->minPixelClock - (SInt64)timing->pixelClock) / 1000000.0;
-			float maxPixelClockErr  = ((SInt64)timing->maxPixelClock - (SInt64)timing->pixelClock) / 1000000.0;
+			double minPixelClockErr  = ((SInt64)timing->minPixelClock - (SInt64)timing->pixelClock) / 1000000.0;
+			double minPixelClockErr2 = ((SInt32)timing->minPixelClock - (SInt64)timing->pixelClock) / 1000000.0;
+			double maxPixelClockErr  = ((SInt64)timing->maxPixelClock - (SInt64)timing->pixelClock) / 1000000.0;
 			
 			inc += scnprintf(buf+inc, bufSize-inc, " (errMHz %g,%g)",
 				(timing->pixelClock == 0 && (timing->minPixelClock >> 32) == 0) ? minPixelClockErr2 : // initialized to -100000 & 0xffffffff for unconnected display of 7800 GT
@@ -4098,7 +4098,7 @@ void DumpDisplayService(io_service_t displayService, int modeAlias, const char *
 						IOI2CConnectRef i2cconnect;
 						result = IOI2CInterfaceOpen(i2cservice, kNilOptions, &i2cconnect);
 						if (KERN_SUCCESS == result) {
-							IOI2CRequest_10_6_0 request;
+							IOI2CRequest_10_6 request;
 
 							/*
 								I2C Slave Address Pair/Address
@@ -5505,25 +5505,17 @@ static void DisplayPortMessages(void) {
 int notTestDisplayIndex = 0;
 int testDisplayIndex = 1;
 
-const int doattributetest    = 0;
-const int doedidoverridetest = 0;
-const int doparsetest        = 0;
-const int dodisplayporttest  = 0;
-const int dodumpall          = 1;
-const int doiogdiagnose      = 1;
+const int doSetupIOFB        = 0; // 0
+const int doAttributeTest    = 0; // 0
+const int doEdidOverrideTest = 0;
+const int doParseTest        = 0;
+const int doDisplayPortTest  = 0;
+const int doDumpAll          = 1; // 1
+const int doIogDiagnose      = 1; // 1
 
 int main(int argc, const char * argv[]) {
 //	@autoreleasepool {
 	const char* macOSName = DarwinMajorVersion() < 12 ? "Mac OS X" : DarwinMajorVersion() < 16 ? "OS X" : "macOS";
-
-    char hwmachine[20];
-    size_t data_len = sizeof(hwmachine) - 1;
-    if (sysctlbyname("hw.machine", &hwmachine, &data_len, NULL, 0)) {
-		snprintf(hwmachine, sizeof(hwmachine), "unknownArch");
-	}
-	else if (!strcmp(hwmachine, "Power Macintosh")) {
-		snprintf(hwmachine, sizeof(hwmachine), "ppc");
-	}
 
 	printf("AllRez %s on %s %s (Darwin %d.%d.%d %s) built on %s at %s using SDK %d.%d.%d%s\n",
 		ARCHITECTURE,
@@ -5532,7 +5524,7 @@ int main(int argc, const char * argv[]) {
 		DarwinMajorVersion(),
 		DarwinMinorVersion(),
 		DarwinRevision(),
-		hwmachine,
+		MachineType(),
 		__DATE__,
 		__TIME__,
 		MAC_OS_X_VERSION_SDK / ((MAC_OS_X_VERSION_SDK < MAC_OS_X_VERSION_10_10) ? 100 : 10000),
@@ -5548,43 +5540,65 @@ int main(int argc, const char * argv[]) {
 	if (argc > 1) {
 		getchar();
 	}
-#if 0
-	if (IofbAvailable()) {
-		// Adjust settings in joevt Lilu / WhateverGreen patches
-		
-		//IofbSetDebugEnabled(true);
-		IofbSetAttributeForDisplay(kIOFBUnused, 'iofb', 'trac', kIOFBAll, kIOFBUnused); // enable all Trace control options // TRACE_MASK
-		
-		
-		
-		IofbSetAttributeForDisplay(notTestDisplayIndex, 'iofb', 'i2cr', false, kIOFBUnused); // dump doi2cRequest
-		IofbSetAttributeForDisplay(notTestDisplayIndex, 'iofb', 'attr', false, kIOFBUnused); // dump get/set atributes
-		IofbSetAttributeForDisplay(notTestDisplayIndex, 'iofb', 'sbnd', false, kIOFBUnused); // don't use sideband property
-		IofbSetAttributeForDisplay(notTestDisplayIndex, 'iofb', 'vala', true, kIOFBUnused); // don't validate all modes
-		
-		IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', 'i2cr', true, kIOFBUnused); // dump doi2cRequest
-		IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', 'attr', true, kIOFBUnused); // dump get/set atributes
-		IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', 'sbnd', false, kIOFBUnused); // don't use sideband property
-		IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', 'vala', true, kIOFBUnused); // don't validate all modes
-		
-		//		IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', kConnectionColorModesSupported      , kIOFBDontOverride, kIOFBUnused); // override set -> set
-		//		IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', kConnectionColorDepthsSupported     , kIOFBDontOverride, kIOFBUnused); // override set -> set
-		//		IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', kConnectionControllerDepthsSupported, kIOFBDontOverride, kIOFBUnused); // override get -> set
-		//		IofbSetAttributeForDisplay(testDisplayIndex, 'atfc', kIOFBConnectIndex0, kConnectionColorDepthsSupported, kIOFBAll);
-		//		IofbSetAttributeForDisplay(testDisplayIndex, 'atfc', kIOFBConnectIndex0, kConnectionColorModesSupported , kIOFBAll);
-		
-		// Can't poll the interrupt because the graphics driver may clear the interrupt after we read
-		// only part of the first message - so the next part of the first message may be from the second message.
-		// Instead, we must use the sideband flag which makes the WhateverGreen iofb patch read the entire
-		// sideband message before the interrupt is cleared.
-		// Actually, we can use the polling method for interrupts. Polling works because clearing the interrupt
-		// doesn't do anything until after the entire reply is read, or the checksum and sequence number is
-		// enough to determine if the reply is valid and we can retry if it is not.
-		IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', 'sbnd', false, kIOFBUnused); // don't use sideband property
-		
-		IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', 'vala', true, kIOFBUnused); // validate all modes
+
+	if (doSetupIOFB) {
+	
+		if (IofbAvailable(testDisplayIndex)) {
+			// Adjust settings in joevt Lilu / WhateverGreen patches
+			
+			//IofbSetDebugEnabled(true);
+			//IofbSetAttributeForDisplay(kIOFBUnused, 'iofb', 'trac', kIOFBAll, kIOFBUnused); // enable all Trace control options // TRACE_MASK
+			
+			//IofbSetAttributeForDisplay(notTestDisplayIndex, 'iofb', 'i2cr', false, kIOFBUnused); // dump doi2cRequest
+			//IofbSetAttributeForDisplay(notTestDisplayIndex, 'iofb', 'attr', false, kIOFBUnused); // dump get/set atributes
+			//IofbSetAttributeForDisplay(notTestDisplayIndex, 'iofb', 'sbnd', false, kIOFBUnused); // don't use sideband property
+			//IofbSetAttributeForDisplay(notTestDisplayIndex, 'iofb', 'vala', false, kIOFBUnused); // don't validate all modes
+			
+			//IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', 'i2cr', true, kIOFBUnused); // dump doi2cRequest
+			//IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', 'attr', true, kIOFBUnused); // dump get/set atributes
+			//IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', 'sbnd', false, kIOFBUnused); // don't use sideband property
+			//IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', 'vala', true, kIOFBUnused); // validate all modes
+
+			//IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', kConnectionColorModesSupported      , kIOFBDontOverride, kIOFBUnused); // override set -> set
+			//IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', kConnectionColorDepthsSupported     , kIOFBDontOverride, kIOFBUnused); // override set -> set
+			//IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', kConnectionControllerDepthsSupported, kIOFBDontOverride, kIOFBUnused); // override get -> set
+			//IofbSetAttributeForDisplay(testDisplayIndex, 'atfc', kIOFBConnectIndex0, kConnectionColorDepthsSupported, kIOFBAll);
+			//IofbSetAttributeForDisplay(testDisplayIndex, 'atfc', kIOFBConnectIndex0, kConnectionColorModesSupported , kIOFBAll);
+			
+			// Can't poll the interrupt because the graphics driver may clear the interrupt after we read
+			// only part of the first message - so the next part of the first message may be from the second message.
+			// Instead, we must use the sideband flag which makes the WhateverGreen iofb patch read the entire
+			// sideband message before the interrupt is cleared.
+			// Actually, we can use the polling method for interrupts. Polling works because clearing the interrupt
+			// doesn't do anything until after the entire reply is read, or the checksum and sequence number is
+			// enough to determine if the reply is valid and we can retry if it is not.
+			//IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', 'sbnd', false, kIOFBUnused); // don't use sideband property
+			
+			IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', 'vala', true, kIOFBUnused); // validate all modes
+			IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', kConnectionColorModesSupported,
+				kIODisplayColorModeRGB | kIODisplayColorModeYCbCr422 | kIODisplayColorModeYCbCr444,
+				kIOFBUnused
+			); // override set -> set
+			IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', kConnectionColorDepthsSupported,
+				kIODisplayRGBColorComponentBits6 | kIODisplayRGBColorComponentBits8 | kIODisplayRGBColorComponentBits10 |
+				kIODisplayRGBColorComponentBits12 | kIODisplayRGBColorComponentBits14 | kIODisplayRGBColorComponentBits16 |
+				kIODisplayYCbCr444ColorComponentBits6 | kIODisplayYCbCr444ColorComponentBits8 | kIODisplayYCbCr444ColorComponentBits10 |
+				kIODisplayYCbCr444ColorComponentBits12 | kIODisplayYCbCr444ColorComponentBits14 | kIODisplayYCbCr444ColorComponentBits16 |
+				kIODisplayYCbCr422ColorComponentBits6 | kIODisplayYCbCr422ColorComponentBits8 | kIODisplayYCbCr422ColorComponentBits10 |
+				kIODisplayYCbCr422ColorComponentBits12 | kIODisplayYCbCr422ColorComponentBits14 | kIODisplayYCbCr422ColorComponentBits16,
+				kIOFBUnused
+			); // override set -> set
+			IofbSetAttributeForDisplay(testDisplayIndex, 'iofb', kConnectionControllerDepthsSupported,
+				kIODisplayRGBColorComponentBits6 | kIODisplayRGBColorComponentBits8 | kIODisplayRGBColorComponentBits10 |
+				kIODisplayRGBColorComponentBits12 | kIODisplayRGBColorComponentBits14 | kIODisplayRGBColorComponentBits16 |
+				kIODisplayYCbCr444ColorComponentBits6 | kIODisplayYCbCr444ColorComponentBits8 | kIODisplayYCbCr444ColorComponentBits10 |
+				kIODisplayYCbCr444ColorComponentBits12 | kIODisplayYCbCr444ColorComponentBits14 | kIODisplayYCbCr444ColorComponentBits16 |
+				kIODisplayYCbCr422ColorComponentBits6 | kIODisplayYCbCr422ColorComponentBits8 | kIODisplayYCbCr422ColorComponentBits10 |
+				kIODisplayYCbCr422ColorComponentBits12 | kIODisplayYCbCr422ColorComponentBits14 | kIODisplayYCbCr422ColorComponentBits16,
+				kIOFBUnused
+			); // override get -> set
+		}
 	}
-#endif
 
 #if 0
 		// Test DisplayPort sideband message super long path
@@ -5599,27 +5613,29 @@ int main(int argc, const char * argv[]) {
 #endif
 		
 #if 1
-		if (doattributetest) {
-			DoAttributeTest(testDisplayIndex);
+		if (doAttributeTest) {
+			//DoAttributeTest(testDisplayIndex);
+			DoAttributeTest(0);
+			DoAttributeTest(1);
 		}
-		if (doedidoverridetest) {
+		if (doEdidOverrideTest) {
 			DoEDIDOverrideTest();
 		}
-		if (doparsetest) {
+		if (doParseTest) {
 			DisplayPortMessages();
 		}
 		
-		if (dodisplayporttest) {
+		if (doDisplayPortTest) {
 			DisplayPortTest();
 		}
-		if (dodumpall) {
+		if (doDumpAll) {
 			DumpAllDisplaysInfo();
 		}
 		else {
 		}
 #endif
 
-		if (doiogdiagnose) {
+		if (doIogDiagnose) {
 
 			if (DarwinMajorVersion() >= 17 && DarwinMajorVersion() <= 18) { // 10.13 and 10.14
 				iprintf("iogdiagnose 10.14.3 = { // (supports 10.13.4, Report version up to 6)\n"); INDENT

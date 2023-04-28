@@ -40,7 +40,7 @@ typedef struct {
 	uint8_t checksum;
 } VCPFeatureReply;
 
-void ddcsetchecksum(IOI2CRequest_10_6_0 *request) {
+void ddcsetchecksum(IOI2CRequest_10_6 *request) {
 	// request.sendBytes[1] = 0x80 + request.sendBytes - 3; // Length
 	UInt8 checksum = request->sendAddress;
 	for (int i = 0; i < request->sendBytes - 1; i++) {
@@ -49,7 +49,7 @@ void ddcsetchecksum(IOI2CRequest_10_6_0 *request) {
 	((UInt8*)(request->sendBuffer))[request->sendBytes - 1] = checksum;
 } // ddcsetchecksum
 
-bool ddcreplyisgood(IOI2CRequest_10_6_0 *request, bool hasSize, UInt8 sendAddress, UInt8 *replyBuffer, int expectedSize) {
+bool ddcreplyisgood(IOI2CRequest_10_6 *request, bool hasSize, UInt8 sendAddress, UInt8 *replyBuffer, int expectedSize) {
 	// zero length result: 6e80be
 	if (request->result)
 		return false;
@@ -197,7 +197,7 @@ long parsevcp(int level, char *vcps, IOI2CConnectRef i2cconnect, int val_IOI2CTr
 				bzero(&featureReply, sizeof(featureReply));
 				
 				if (vcpdirection == kVCPDirectionRO || vcpdirection == kVCPDirectionRW) {
-					IOI2CRequest_10_6_0 request;
+					IOI2CRequest_10_6 request;
 					IOReturn result = kIOReturnSuccess;
 					bool ddcReplyIsBad = false;
 
