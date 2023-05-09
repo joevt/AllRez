@@ -59,6 +59,22 @@ extern int iogdiagnose (int dumpToFile, const char *optarg);
 #endif
 
 //=================================================================================================================================
+// Debugging and testing options
+
+int notTestDisplayIndex = 0;
+int testDisplayIndex = 1;
+
+const int doSetupIOFB          = 0; // 0
+const int doAttributeTest      = 0; // 0
+const int doEdidOverrideTest   = 0;
+const int doParseTest          = 0;
+const int doDisplayPortTest    = 0;
+const int doDumpAll            = 1; // 1
+const int doIogDiagnose        = 1; // 1
+      int doSetDisplayModeTest = 0; // 0
+
+
+//=================================================================================================================================
 // Linux includes
 
 #include <drm/display/drm_dp_helper.h>
@@ -5218,6 +5234,34 @@ do { \
 				if (result) cprintf(" result:%d", (uint32_t)result);
 #endif
 				cprintf(",\n");
+
+				if (doSetDisplayModeTest) {
+					if (modes[displayIndex][i].width == 2560) {
+						CGDisplayConfigRef config;
+						CGError result = CGBeginDisplayConfiguration(&config);
+						if (!result) {
+							result = CGSConfigureDisplayMode(config, display, i);
+							if (result) {
+								iprintf("Error configuring display mode %d\n", (uint32_t)result);
+							}
+							result = CGCompleteDisplayConfiguration(config, kCGConfigureForSession);
+							if (result) {
+								iprintf("Error completing configuration %d\n", (uint32_t)result);
+							}
+							else {
+								uint32_t modeNum;
+								CGSGetCurrentDisplayMode(display, &modeNum);
+								if (modeNum != i) {
+									iprintf("Set mode %d attempted but mode is %d\n", i, modeNum);
+								}
+								else {
+									iprintf("Set mode successful\n", i, modeNum);
+								}
+							}
+						}
+					}
+				}
+
 			}
 			OUTDENT iprintf("}; // CGSGetDisplayModeDescriptionOfLength\n");
 		} // CGSGetNumberOfDisplayModes
@@ -5501,18 +5545,6 @@ static void DisplayPortMessages(void) {
 	}
 } // DisplayPortMessages
 
-
-int notTestDisplayIndex = 0;
-int testDisplayIndex = 1;
-
-const int doSetupIOFB        = 0; // 0
-const int doAttributeTest    = 0; // 0
-const int doEdidOverrideTest = 0;
-const int doParseTest        = 0;
-const int doDisplayPortTest  = 0;
-const int doDumpAll          = 1; // 1
-const int doIogDiagnose      = 1; // 1
-
 int main(int argc, const char * argv[]) {
 //	@autoreleasepool {
 	const char* macOSName = DarwinMajorVersion() < 12 ? "Mac OS X" : DarwinMajorVersion() < 16 ? "OS X" : "macOS";
@@ -5631,8 +5663,7 @@ int main(int argc, const char * argv[]) {
 		if (doDumpAll) {
 			DumpAllDisplaysInfo();
 		}
-		else {
-		}
+
 #endif
 
 		if (doIogDiagnose) {
