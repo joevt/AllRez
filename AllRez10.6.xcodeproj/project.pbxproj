@@ -654,6 +654,7 @@
 					"${PROJECT_DIR}/AllRez",
 				);
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_FORCE_CPU_SUBTYPE_ALL = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -668,6 +669,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/include/";
 				MACOSX_DEPLOYMENT_TARGET = 10.4;
+				OTHER_LDFLAGS = "-force_cpusubtype_ALL";
 				SDKROOT = macosx10.6;
 				SYMROOT = build/build10.6;
 				SYSTEM_HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/include/ ${SRCROOT}/AllRez/Kernel.framework/";
@@ -722,6 +724,7 @@
 					/System/Library/PrivateFrameworks,
 					"${PROJECT_DIR}/AllRez",
 				);
+				GCC_FORCE_CPU_SUBTYPE_ALL = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -731,6 +734,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/include/";
 				MACOSX_DEPLOYMENT_TARGET = 10.4;
+				OTHER_LDFLAGS = "-force_cpusubtype_ALL";
 				SDKROOT = macosx10.6;
 				SYMROOT = build/build10.6;
 				SYSTEM_HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/include/ ${SRCROOT}/AllRez/Kernel.framework/";
