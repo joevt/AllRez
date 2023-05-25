@@ -5306,7 +5306,7 @@ do { \
 									iprintf("Set mode %d attempted but mode is %d\n", i, modeNum);
 								}
 								else {
-									iprintf("Set mode successful\n", i, modeNum);
+									iprintf("Set mode successful\n");
 								}
 							}
 						}
