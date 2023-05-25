@@ -1490,52 +1490,69 @@ static void DoOneDisplayPort(io_service_t ioFramebufferService, IOI2CConnectRef 
 	bzero(dpcd, 0x100000);
 	DpError dperr = dpNoError;
 	char resultStr[40];
+	bool isSynaptics = false;
+	int dpcdAddr;
+	const int dpcdIncrement = 16;
+	CFMutableStringRef synapticsLog = NULL;
 
 	int dpcdRangeNdx;
-	for (dpcdRangeNdx = 0; dpcdranges[dpcdRangeNdx] >= 0; dpcdRangeNdx += 2) {
+	for (dpcdRangeNdx = 0; (dpcdAddr = dpcdranges[dpcdRangeNdx]) >= 0; dpcdRangeNdx += 2) {
 		bool hasError = false;
-		int dpcdAddr;
-		int dpcdIncrement = 16;
-		for (dpcdAddr = dpcdranges[dpcdRangeNdx]; dpcdAddr < dpcdranges[dpcdRangeNdx + 1]; dpcdAddr += dpcdIncrement) {
-			int maxattempts = 1;
-			int attempt;
-			for (attempt = 0; attempt < maxattempts; attempt++) {
-				gDumpSidebandMessage = (dpcdAddr == 0) * (kReq | kRep);
-				result = mst_req_dpcd_read(ioFramebufferService, i2cconnect, path, pathLength, dpcdAddr, dpcdIncrement, &dpcd[dpcdAddr], &dperr);
-				gDumpSidebandMessage = 0;
 
-				if (result || dperr) {
-					iprintf("(%05xh:%s%s)\n", dpcdAddr, DpErrorStr(dperr), DumpOneReturn(resultStr, sizeof(resultStr), result));
-				}
-				else if (attempt > 0) {
-					iprintf("(%05xh: success)\n", dpcdAddr);
-				}
-				if (!result) {
+		for ( ; dpcdAddr < dpcdranges[dpcdRangeNdx + 1]; dpcdAddr += dpcdIncrement) {
+
+			isSynaptics = (dpcdAddr == 0x5e0 && dpcd[DP_BRANCH_OUI+0] == 0x90 && dpcd[DP_BRANCH_OUI+1] == 0xcc && dpcd[DP_BRANCH_OUI+2] == 0x24);
+
+			do {
+				int maxattempts = 1;
+				int attempt;
+				for (attempt = 0; attempt < maxattempts; attempt++) {
+					gDumpSidebandMessage = (dpcdAddr == 0) * (kReq | kRep);
+					result = mst_req_dpcd_read(ioFramebufferService, i2cconnect, path, pathLength, dpcdAddr, dpcdIncrement, &dpcd[dpcdAddr], &dperr);
+					gDumpSidebandMessage = 0;
+
+					if (result || dperr) {
+						iprintf("(%05xh:%s%s)\n", dpcdAddr, DpErrorStr(dperr), DumpOneReturn(resultStr, sizeof(resultStr), result));
+					}
+					else if (attempt > 0) {
+						iprintf("(%05xh: success)\n", dpcdAddr);
+					}
+					if (!result) {
+						break;
+					}
+					if (dperr == dpErrSequenceMismatch) {
+						usleep(4 * 1000000); // wait four seconds to timeout the messages before retrying
+						maxattempts = 3;
+						continue;
+					}
+					if (dperr == dpErrCrc) {
+						maxattempts = 3;
+						continue;
+					}
+					if (dperr == dpErrNak) {
+						dpcdAddr = 0; // pretend that we NAK'ed on the first address which cause all other addresses to be skipped
+						break;
+					}
+				} // for attempt
+
+				hasError = false;
+				if (result) {
+					bzero(&dpcd[dpcdAddr], dpcdIncrement);
+					if (attempt > 1) {
+						//iprintf("(%05xh:%s%s after %d attempts)\n", dpcdAddr, DpErrorStr(dperr), DumpOneReturn(resultStr, sizeof(resultStr), result), attempt);
+					}
+					hasError = true;
 					break;
 				}
-				if (dperr == dpErrSequenceMismatch) {
-					usleep(4 * 1000000); // wait four seconds to timeout the messages before retrying
-					maxattempts = 3;
-					continue;
+				else if (isSynaptics && dpcd[dpcdAddr] > 0 && dpcd[dpcdAddr] < 16) {
+					if (!synapticsLog) {
+						synapticsLog = CFStringCreateMutable(kCFAllocatorDefault, 0);
+					}
+					CFStringAppendPascalString(synapticsLog, (ConstStr255Param)&dpcd[dpcdAddr], kCFStringEncodingUTF8);
 				}
-				if (dperr == dpErrCrc) {
-					maxattempts = 3;
-					continue;
-				}
-				if (dperr == dpErrNak) {
-					dpcdAddr = 0; // pretend that we NAK'ed on the first address which cause all other addresses to be skipped
+				else
 					break;
-				}
-			} // for attempt
-
-			hasError = false;
-			if (result) {
-				bzero(&dpcd[dpcdAddr], dpcdIncrement);
-				if (attempt > 1) {
-					//iprintf("(%05xh:%s%s after %d attempts)\n", dpcdAddr, DpErrorStr(dperr), DumpOneReturn(resultStr, sizeof(resultStr), result), attempt);
-				}
-				hasError = true;
-			}
+			} while (1);
 
 			if (hasError && dpcdAddr == 0) {
 				break; // if we can't read dpcd 00000h then it's probably not a DisplayPort device
@@ -1546,6 +1563,40 @@ static void DoOneDisplayPort(io_service_t ioFramebufferService, IOI2CConnectRef 
 		}
 	} // for dpcdRangeNdx
 	if (dpcdRangeNdx > 0) {
+
+		if (synapticsLog) {
+			iprintf("Synaptics Log = {\n"); INDENT
+			iprintf("");
+
+			size_t maxsize = CFStringGetMaximumSizeForEncoding(CFStringGetLength(synapticsLog), kCFStringEncodingUTF8);
+			char *strinfo = (char *)malloc(maxsize);
+			if (strinfo) {
+				if (CFStringGetCString(synapticsLog, strinfo, maxsize, kCFStringEncodingUTF8)) {
+					char *s = strinfo;
+					char *c;
+					for (c = s; ; c++) {
+						if (*c == 0x00 || *c == 0x0d) {
+							cprintf("%.*s\n", (int)(c - s), s);
+							if (*c == 0x00 || (c[1] == 0x0a && c[2] == 0x00)) break;
+							iprintf("");
+							c++;
+							if (*c == 0x0a) c++;
+							s = c;
+						}
+					}
+				}
+				else {
+					iprintf("Error: Could not convert Synaptics Log.\n");
+				}
+				free(strinfo);
+			}
+			else {
+				iprintf("Error: Could not allocate Synaptics Log.\n");
+			}
+			
+			OUTDENT; iprintf("} // Synaptics Log\n");
+		}
+
 		parsedpcd(dpcd);
 		
 		int numPorts = dpcd[DP_DOWN_STREAM_PORT_COUNT] & DP_PORT_COUNT_MASK;
