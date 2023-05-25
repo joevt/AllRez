@@ -67,8 +67,6 @@ int dpcdranges[] = {
 	0x03050, 0x03060,
 	0x03100, 0x03190,
 
-//#warning remove this limit when done testing
-#if 1
 	// 0x68000 HDCP 1.3 and HDCP 2.2
 	0x68000, 0x68040,
 	0x680c0, 0x68100,
@@ -90,10 +88,14 @@ int dpcdranges[] = {
 	// 0x81000 Remote Command Pass-through Field
 
 	// 0x81000 RESERVED
+
+	// 0xe0000 USB4 DPCD BW Allocation Registers
+	0xe0000, 0xe0040,
+
 	// 0xf0000 LTTPR: Link Training (LT)-tunable PHY Repeaters
 	0xf0000, 0xf02d0,
 	// 0xFFFFF end
-#endif
+
 	-1
 };
 
@@ -172,6 +174,7 @@ void parsedpcd(UInt8* dpcd) {
 #define ob32be(reg) val = d32be(reg); onotzerofield(reg, oname(#reg))
 #define ob24be(reg) val = d24be(reg); onotzerofield(reg, oname(#reg))
 #define ob16be(reg) val = d16be(reg); onotzerofield(reg, oname(#reg))
+#define ov(reg)	onotzerofield(reg, oname(#reg))
 
 // get register value and do field using specific register name
 #define obn16( reg, n) val = d16(reg) ; name = n ; ofield(reg)
@@ -246,7 +249,7 @@ void parsedpcd(UInt8* dpcd) {
 				switch (val) {
 					oc( 6, "RBR")
 					oc(10, "HBR")
-					oc(12, "3_24 (AppleVGA)")
+					oc(12, "RBR2")
 					oc(20, "HBR2")
 					oc(30, "HBR3")
 					od("?%gGbps (unknown)", 0.27 * val)
@@ -488,12 +491,21 @@ void parsedpcd(UInt8* dpcd) {
 				ofd(0xfc)
 			}
 
-			dumpnotzero(0x59, 0x060)
+			#define DP_RX_GTC_FREQ_LOCK_DONE 0x059
+			ob(DP_RX_GTC_FREQ_LOCK_DONE) { // 0x058
+				ofs(1, "done")
+				ofd(0xfe)
+			}
+
+			dumpnotzero(0x5a, 0x060)
 			
 			if (!iszero(DP_DSC_SUPPORT, DP_DSC_BITS_PER_PIXEL_INC + 1) || !iszero(DP_DSC_ENABLE, DP_DSC_CONFIGURATION + 1)) {
 				obx(DP_DSC_SUPPORT) { // 0x060   /* DP 1.4 */
 					of(DP_DSC_DECOMPRESSION_IS_SUPPORTED) // (1 << 0)
-					ofd(0xfe)
+					of(DP_DSC_PASSTHROUGH_IS_SUPPORTED) // (1 << 1)
+					of(DP_DSC_DYNAMIC_PPS_UPDATE_SUPPORT_COMP_TO_COMP) // (1 << 2)
+					of(DP_DSC_DYNAMIC_PPS_UPDATE_SUPPORT_UNCOMP_TO_COMP) // (1 << 3)
+					ofd(0xf0)
 				}
 
 				obx(DP_DSC_REV) { // 0x061
@@ -553,13 +565,21 @@ void parsedpcd(UInt8* dpcd) {
 
 				obx(DP_DSC_BLK_PREDICTION_SUPPORT) { // 0x066
 					of(DP_DSC_BLK_PREDICTION_IS_SUPPORTED) // (1 << 0)
-					ofd(0xfe)
+					of(DP_DSC_RGB_COLOR_CONV_BYPASS_SUPPORT) // (1 << 1)
+					ofd(0xfc)
 				}
 
 				#define DP_DSC_MAX_BITS_PER_PIXEL DP_DSC_MAX_BITS_PER_PIXEL_LOW
 				obx16(DP_DSC_MAX_BITS_PER_PIXEL) { // 0x067, 0x068   /* eDP 1.4 */
 					cp("%g bpp", (val & 0x3ff) / 16.0);
-					ofd(0xfc00)
+				}
+
+				val = d8(DP_DSC_MAX_BITS_PER_PIXEL_HI) & ~DP_DSC_MAX_BITS_PER_PIXEL_HI_MASK;
+				ov(DP_DSC_MAX_BITS_PER_PIXEL_HI) {
+					lb("DSC_MAX_BPP_DELTA_VERSION")
+					cp("%d", (val & DP_DSC_MAX_BPP_DELTA_VERSION_MASK) >> 5); // (0x3 << 5)	/* eDP 1.5 & DP 2.0 */
+					ofs(DP_DSC_MAX_BPP_DELTA_AVAILABILITY, "DSC_MAX_BPP_DELTA_AVAILABLE") // (1 << 7)	/* eDP 1.5 & DP 2.0 */
+					ofd(0x1c)
 				}
 
 				obx(DP_DSC_DEC_COLOR_FORMAT_CAP) { // 0x069
@@ -645,7 +665,7 @@ void parsedpcd(UInt8* dpcd) {
 						oc(DP_DSC_BITS_PER_PIXEL_1_8 ,  "1/8 bpp") // 1
 						oc(DP_DSC_BITS_PER_PIXEL_1_4 ,  "1/4 bpp") // 2
 						oc(DP_DSC_BITS_PER_PIXEL_1_2 ,  "1/2 bpp") // 3
-						oc(DP_DSC_BITS_PER_PIXEL_1   ,    "1 bpp") // 4
+						oc(DP_DSC_BITS_PER_PIXEL_1_1 ,    "1 bpp") // 4
 						od("?%d (unknown)", val & 7)
 					}
 					ofd(0xf8)
@@ -1031,7 +1051,7 @@ void parsedpcd(UInt8* dpcd) {
 					oc(DP_LINK_RATE_TABLE, "LINK_RATE_TABLE") // 0x00    /* eDP 1.4 */
 					oc(DP_LINK_BW_1_62, "RBR") // 0x06
 					oc(DP_LINK_BW_2_7, "HBR") // 0x0a
-					oc(12, "3_24 (AppleVGA)") // 0x0c
+					oc(12, "RBR2") // 0x0c
 					oc(DP_LINK_BW_5_4, "HBR2") // 0x14    /* 1.2 */
 					oc(DP_LINK_BW_8_1, "HBR3") // 0x1e    /* 1.4 */
 					oc(DP_LINK_BW_10, "UHBR 10") // 0x01    /* 2.0 128b/132b Link Layer */
@@ -1114,8 +1134,9 @@ void parsedpcd(UInt8* dpcd) {
 
 			ob(DP_DOWNSPREAD_CTRL) { // 0x107
 				of(DP_SPREAD_AMP_0_5) // (1 << 4)
+				of(DP_FIXED_VTOTAL_AS_SDP_EN_IN_PR_ACTIVE) // (1 << 6)
 				of(DP_MSA_TIMING_PAR_IGNORE_EN) // (1 << 7) /* eDP */
-				ofd(0x6f)
+				ofd(0x2f)
 			}
 
 			ob(DP_MAIN_LINK_CHANNEL_CODING_SET) { // 0x108
@@ -1367,7 +1388,13 @@ void parsedpcd(UInt8* dpcd) {
 					}
 					ofd(0xc0)
 				}
-				dumpnotzero(0x121, 0x130)
+
+				ob(DP_SDP_ERROR_DETECTION_CONFIGURATION) { // 0x121	/* DP 2.0 E11 */
+					of(DP_SDP_CRC16_128B132B_EN) // BIT(0)
+					ofd(0xfe)
+				}
+
+				dumpnotzero(0x122, 0x130)
 			}
 
 			dumpnotzero(0x130, 0x154)
@@ -1593,311 +1620,331 @@ void parsedpcd(UInt8* dpcd) {
 				}
 			}
 			
-			ob(DP_TEST_REQUEST) { // 0x218
-				of(DP_TEST_LINK_TRAINING) // (1 << 0)
-				of(DP_TEST_LINK_VIDEO_PATTERN) // (1 << 1)
-				of(DP_TEST_LINK_EDID_READ) // (1 << 2)
-				of(DP_TEST_LINK_PHY_TEST_PATTERN) // (1 << 3) /* DPCD >= 1.1 */
-				of(DP_TEST_LINK_FAUX_PATTERN) // (1 << 4) /* DPCD >= 1.2 */
-				of(DP_TEST_LINK_AUDIO_PATTERN) // (1 << 5) /* DPCD >= 1.2 */
-				of(DP_TEST_LINK_AUDIO_DISABLED_VIDEO) // (1 << 6) /* DPCD >= 1.2 */
-				ofd(0x80)
-			}
+			if (!iszero(0x00218, 0x00280)) {
+				olf;
+				iprintf("Automated Testing Sub-Field"); INDENT
 
-			ob(DP_TEST_LINK_RATE) { // 0x219
-				switch (val) {
-					oc(DP_LINK_RATE_162, "RBR") // (0x6)
-					oc(DP_LINK_RATE_27 , "HBR") // (0xa)
-					oc(DP_LINK_BW_5_4  , "HBR2") // (0x14)
-					oc(DP_LINK_BW_8_1  , "HBR3") // 0x1e    /* 1.4 */
-					od("?%d (unknown)", val)
+				ob(DP_TEST_REQUEST) { // 0x218
+					of(DP_TEST_LINK_TRAINING) // (1 << 0)
+					of(DP_TEST_LINK_VIDEO_PATTERN) // (1 << 1)
+					of(DP_TEST_LINK_EDID_READ) // (1 << 2)
+					of(DP_TEST_LINK_PHY_TEST_PATTERN) // (1 << 3) /* DPCD >= 1.1 */
+					of(DP_TEST_LINK_FAUX_PATTERN) // (1 << 4) /* DPCD >= 1.2 */
+					of(DP_TEST_LINK_AUDIO_PATTERN) // (1 << 5) /* DPCD >= 1.2 */
+					of(DP_TEST_LINK_AUDIO_DISABLED_VIDEO) // (1 << 6) /* DPCD >= 1.2 */
+					ofd(0x80)
 				}
-			}
-			
-			dumpnotzero(0x21a, 0x220)
 
-			ob(DP_TEST_LANE_COUNT) { // 0x220
-				oim(0x1f)
-				ofd(0xe0)
-			}
-
-			ob(DP_TEST_PATTERN) { // 0x221
-				switch (val) {
-					oc(DP_NO_TEST_PATTERN               , "NONE"                          ) // 0x0
-					oc(DP_COLOR_RAMP                    , "COLOR_RAMP"                    ) // 0x1
-					oc(DP_BLACK_AND_WHITE_VERTICAL_LINES, "BLACK_AND_WHITE_VERTICAL_LINES") // 0x2
-					oc(DP_COLOR_SQUARE                  , "COLOR_SQUARES"                 ) // 0x3
-					od("?%d (unknown TEST_PATTERN)", val)
-				}
-			}
-
-	#define DP_TEST_H_TOTAL DP_TEST_H_TOTAL_HI
-	#define DP_TEST_V_TOTAL DP_TEST_V_TOTAL_HI
-	#define DP_TEST_H_START DP_TEST_H_START_HI
-	#define DP_TEST_V_START DP_TEST_V_START_HI
-			ob16be(DP_TEST_H_TOTAL) { // 0x222, 0x223
-				oi()
-			}
-			ob16be(DP_TEST_V_TOTAL) { // 0x224, 0x225
-				oi()
-			}
-			ob16be(DP_TEST_H_START) { // 0x226, 0x227
-				oi()
-			}
-			ob16be(DP_TEST_V_START) { // 0x228, 0x229
-				oi()
-			}
-
-	#define DP_TEST_HSYNC DP_TEST_HSYNC_HI
-	#define DP_TEST_VSYNC DP_TEST_VSYNC_HI
-	#define DP_TEST_H_WIDTH DP_TEST_H_WIDTH_HI
-	#define DP_TEST_V_HEIGHT DP_TEST_V_HEIGHT_HI
-
-			ob16be(DP_TEST_HSYNC) { // 0x22A, 0x22B
-				lb("WIDTH")
-				oim(0x7fff)
-				lb("POLARITY")
-				cp("%d", val >> 15);
-			}
-
-			ob16be(DP_TEST_VSYNC) { // 0x22C, 0x22D
-				lb("WIDTH")
-				oim(0x7fff)
-				lb("POLARITY")
-				cp("%d", val >> 15);
-			}
-
-			ob16be(DP_TEST_H_WIDTH) { // 0x22E, 0x22F
-				oi()
-			}
-
-			ob16be(DP_TEST_V_HEIGHT) { // 0x230, 0x231
-				oi()
-			}
-
-			ob(DP_TEST_MISC0) { // 0x232
-				cp("%s", (val & DP_TEST_SYNC_CLOCK) ? "Link clock and stream clock synchronous" : "Link clock and stream clock asynchronous"); // (1 << 0) (0 << 0)
-				sw(DP_TEST_COLOR_FORMAT_MASK) { // (3 << 1)
-					oc(DP_COLOR_FORMAT_RGB     , "COLOR_FORMAT_RGB"     ) // (0 << 1)
-					oc(DP_COLOR_FORMAT_YCbCr422, "COLOR_FORMAT_YCbCr422") // (1 << 1)
-					oc(DP_COLOR_FORMAT_YCbCr444, "COLOR_FORMAT_YCbCr444") // (2 << 1)
-					od("?%d (unknown COLOR_FORMAT)", (val & DP_TEST_COLOR_FORMAT_MASK) >> DP_TEST_COLOR_FORMAT_SHIFT)
-				}
-				of2(DP_TEST_DYNAMIC_RANGE_CEA, DP_TEST_DYNAMIC_RANGE_VESA) // (1 << 3) (0 << 3)
-				of2(DP_YCBCR_COEFFICIENTS_ITU709, DP_YCBCR_COEFFICIENTS_ITU601) // (1 << 4) (0 << 4)
-				sw(DP_TEST_BIT_DEPTH_MASK) { // (7 << 5)
-					oc(DP_TEST_BIT_DEPTH_6 , "TEST_BIT_DEPTH_6") // (0 << 5)
-					oc(DP_TEST_BIT_DEPTH_8 , "TEST_BIT_DEPTH_8") // (1 << 5)
-					oc(DP_TEST_BIT_DEPTH_10, "TEST_BIT_DEPTH_10") // (2 << 5)
-					oc(DP_TEST_BIT_DEPTH_12, "TEST_BIT_DEPTH_12") // (3 << 5)
-					oc(DP_TEST_BIT_DEPTH_16, "TEST_BIT_DEPTH_16") // (4 << 5)
-					od("?%d (unknown BIT_DEPTH)", (val & DP_TEST_BIT_DEPTH_MASK) >> DP_TEST_BIT_DEPTH_SHIFT)
-				}
-			}
-
-			ob(DP_TEST_MISC1) { // 0x233
-				lb("REFRESH_RATE_DENOMINATOR")
-				cp("%s", (val & DP_TEST_REFRESH_DENOMINATOR) ? "1.001" : "1"); // (1 << 0) (0 << 0)
-				cp("%s", (val & DP_TEST_INTERLACED) ? "interlaced" : "non-interlaced"); // (1 << 0)  (1 << 1) (0 << 1)
-				ofd(0xfc)
-			}
-
-			ob(DP_TEST_REFRESH_RATE_NUMERATOR) { // 0x234
-				cp("%d", val);
-				lb("TEST_REFRESH_RATE")
-				cp("%gHz", val / (((d8(DP_TEST_MISC1) & DP_TEST_REFRESH_DENOMINATOR)) ? 1.001 : 1));
-			}
-
-			dumpnotzero(0x235, 0x240);
-			
-			ob16(DP_TEST_CRC_R_CR) { // 0x240
-				cp("0x%04x", val);
-			}
-			ob16(DP_TEST_CRC_G_Y) { // 0x242
-				cp("0x%04x", val);
-			}
-			ob16(DP_TEST_CRC_B_CB) { // 0x244
-				cp("0x%04x", val);
-			}
-
-			ob(DP_TEST_SINK_MISC) { // 0x246
-				lb("TST_CRC_COUNT")
-				oim(DP_TEST_COUNT_MASK)
-				ofd(0x10)
-				of(DP_TEST_CRC_SUPPORTED) // (1 << 5)
-				ofd(0xc0)
-			}
-
-			dumpnotzero(0x247, 0x248)
-
-			ob(DP_PHY_TEST_PATTERN) { // 0x248
-				sw(DP_PHY_TEST_PATTERN_SEL_MASK) { // 0x7
-					oc(DP_PHY_TEST_PATTERN_NONE        , "PHY_TEST_PATTERN_NONE"        ) // 0x0
-					oc(DP_PHY_TEST_PATTERN_D10_2       , "PHY_TEST_PATTERN_D10_2"       ) // 0x1
-					oc(DP_PHY_TEST_PATTERN_ERROR_COUNT , "PHY_TEST_PATTERN_ERROR_COUNT" ) // 0x2
-					oc(DP_PHY_TEST_PATTERN_PRBS7       , "PHY_TEST_PATTERN_PRBS7"       ) // 0x3
-					oc(DP_PHY_TEST_PATTERN_80BIT_CUSTOM, "PHY_TEST_PATTERN_80BIT_CUSTOM") // 0x4
-					oc(DP_PHY_TEST_PATTERN_CP2520      , "PHY_TEST_PATTERN_CP2520"      ) // 0x5
-					od("?%d (unknown PHY_TEST_PATTERN)", val & DP_PHY_TEST_PATTERN_SEL_MASK)
-				}
-				ofd(0xf8)
-			}
-
-			if (d8(DP_DPCD_REV) < 0x14) {
-				#define DP_TEST_FAUX 0x249 /* 1.2 */
-				# define DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_SEL_MASK (7 << 0)
-				# define DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_NONE        0
-				# define DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_D10_2       1
-				# define DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_ERROR_COUNT 2
-				# define DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_PRBS7       3
-				# define DP_FAUX_BACK_CHANNEL_ERROR_COUNT_REQUEST (1 << 3)
-
-				ob(DP_TEST_FAUX) { // 0x249 /* 1.2 */
-					sw(DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_SEL_MASK) { // (7 << 0)
-						oc(DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_NONE        , "FAUX_FORWARD_CHANNEL_TEST_PATTERN_NONE"        ) // 0x0
-						oc(DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_D10_2       , "FAUX_FORWARD_CHANNEL_TEST_PATTERN_D10_2"       ) // 0x1
-						oc(DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_ERROR_COUNT , "FAUX_FORWARD_CHANNEL_TEST_PATTERN_ERROR_COUNT" ) // 0x2
-						oc(DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_PRBS7       , "FAUX_FORWARD_CHANNEL_TEST_PATTERN_PRBS7"       ) // 0x3
-						od("?%d (unknown FAUX_FORWARD_CHANNEL_TEST_PATTERN)", val & DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_SEL_MASK)
+				ob(DP_TEST_LINK_RATE) { // 0x219
+					switch (val) {
+							oc(DP_LINK_RATE_162, "RBR") // (0x6)
+							oc(DP_LINK_RATE_27 , "HBR") // (0xa)
+							oc(DP_LINK_BW_5_4  , "HBR2") // (0x14)
+							oc(DP_LINK_BW_8_1  , "HBR3") // 0x1e    /* 1.4 */
+							od("?%d (unknown)", val)
 					}
-					of(DP_FAUX_BACK_CHANNEL_ERROR_COUNT_REQUEST)
-					ofd(0xf0)
 				}
-			}
-			else {
-				ob(DP_PHY_SQUARE_PATTERN) { // 0x249
+				
+				dumpnotzero(0x21a, 0x220)
+				
+				ob(DP_TEST_LANE_COUNT) { // 0x220
+					oim(0x1f)
+					ofd(0xe0)
+				}
+				
+				ob(DP_TEST_PATTERN) { // 0x221
+					switch (val) {
+							oc(DP_NO_TEST_PATTERN               , "NONE"                          ) // 0x0
+							oc(DP_COLOR_RAMP                    , "COLOR_RAMP"                    ) // 0x1
+							oc(DP_BLACK_AND_WHITE_VERTICAL_LINES, "BLACK_AND_WHITE_VERTICAL_LINES") // 0x2
+							oc(DP_COLOR_SQUARE                  , "COLOR_SQUARES"                 ) // 0x3
+							od("?%d (unknown TEST_PATTERN)", val)
+					}
+				}
+				
+				#define DP_TEST_H_TOTAL DP_TEST_H_TOTAL_HI
+				#define DP_TEST_V_TOTAL DP_TEST_V_TOTAL_HI
+				#define DP_TEST_H_START DP_TEST_H_START_HI
+				#define DP_TEST_V_START DP_TEST_V_START_HI
+				ob16be(DP_TEST_H_TOTAL) { // 0x222, 0x223
+					oi()
+				}
+				ob16be(DP_TEST_V_TOTAL) { // 0x224, 0x225
+					oi()
+				}
+				ob16be(DP_TEST_H_START) { // 0x226, 0x227
+					oi()
+				}
+				ob16be(DP_TEST_V_START) { // 0x228, 0x229
+					oi()
+				}
+				
+				#define DP_TEST_HSYNC DP_TEST_HSYNC_HI
+				#define DP_TEST_VSYNC DP_TEST_VSYNC_HI
+				#define DP_TEST_H_WIDTH DP_TEST_H_WIDTH_HI
+				#define DP_TEST_V_HEIGHT DP_TEST_V_HEIGHT_HI
+				
+				ob16be(DP_TEST_HSYNC) { // 0x22A, 0x22B
+					lb("WIDTH")
+					oim(0x7fff)
+					lb("POLARITY")
+					cp("%d", val >> 15);
+				}
+				
+				ob16be(DP_TEST_VSYNC) { // 0x22C, 0x22D
+					lb("WIDTH")
+					oim(0x7fff)
+					lb("POLARITY")
+					cp("%d", val >> 15);
+				}
+				
+				ob16be(DP_TEST_H_WIDTH) { // 0x22E, 0x22F
+					oi()
+				}
+				
+				ob16be(DP_TEST_V_HEIGHT) { // 0x230, 0x231
+					oi()
+				}
+				
+				ob(DP_TEST_MISC0) { // 0x232
+					cp("%s", (val & DP_TEST_SYNC_CLOCK) ? "Link clock and stream clock synchronous" : "Link clock and stream clock asynchronous"); // (1 << 0) (0 << 0)
+					sw(DP_TEST_COLOR_FORMAT_MASK) { // (3 << 1)
+						oc(DP_COLOR_FORMAT_RGB     , "COLOR_FORMAT_RGB"     ) // (0 << 1)
+						oc(DP_COLOR_FORMAT_YCbCr422, "COLOR_FORMAT_YCbCr422") // (1 << 1)
+						oc(DP_COLOR_FORMAT_YCbCr444, "COLOR_FORMAT_YCbCr444") // (2 << 1)
+						od("?%d (unknown COLOR_FORMAT)", (val & DP_TEST_COLOR_FORMAT_MASK) >> DP_TEST_COLOR_FORMAT_SHIFT)
+					}
+					of2(DP_TEST_DYNAMIC_RANGE_CEA, DP_TEST_DYNAMIC_RANGE_VESA) // (1 << 3) (0 << 3)
+					of2(DP_YCBCR_COEFFICIENTS_ITU709, DP_YCBCR_COEFFICIENTS_ITU601) // (1 << 4) (0 << 4)
+					sw(DP_TEST_BIT_DEPTH_MASK) { // (7 << 5)
+						oc(DP_TEST_BIT_DEPTH_6 , "TEST_BIT_DEPTH_6") // (0 << 5)
+						oc(DP_TEST_BIT_DEPTH_8 , "TEST_BIT_DEPTH_8") // (1 << 5)
+						oc(DP_TEST_BIT_DEPTH_10, "TEST_BIT_DEPTH_10") // (2 << 5)
+						oc(DP_TEST_BIT_DEPTH_12, "TEST_BIT_DEPTH_12") // (3 << 5)
+						oc(DP_TEST_BIT_DEPTH_16, "TEST_BIT_DEPTH_16") // (4 << 5)
+						od("?%d (unknown BIT_DEPTH)", (val & DP_TEST_BIT_DEPTH_MASK) >> DP_TEST_BIT_DEPTH_SHIFT)
+					}
+				}
+				
+				ob(DP_TEST_MISC1) { // 0x233
+					lb("REFRESH_RATE_DENOMINATOR")
+					cp("%s", (val & DP_TEST_REFRESH_DENOMINATOR) ? "1.001" : "1"); // (1 << 0) (0 << 0)
+					cp("%s", (val & DP_TEST_INTERLACED) ? "interlaced" : "non-interlaced"); // (1 << 0)  (1 << 1) (0 << 1)
+					ofd(0xfc)
+				}
+				
+				ob(DP_TEST_REFRESH_RATE_NUMERATOR) { // 0x234
+					cp("%d", val);
+					lb("TEST_REFRESH_RATE")
+					cp("%gHz", val / (((d8(DP_TEST_MISC1) & DP_TEST_REFRESH_DENOMINATOR)) ? 1.001 : 1));
+				}
+				
+				dumpnotzero(0x235, 0x240);
+				
+				ob16(DP_TEST_CRC_R_CR) { // 0x240
+					cp("0x%04x", val);
+				}
+				ob16(DP_TEST_CRC_G_Y) { // 0x242
+					cp("0x%04x", val);
+				}
+				ob16(DP_TEST_CRC_B_CB) { // 0x244
+					cp("0x%04x", val);
+				}
+				
+				ob(DP_TEST_SINK_MISC) { // 0x246
+					lb("TST_CRC_COUNT")
+					oim(DP_TEST_COUNT_MASK)
+					ofd(0x10)
+					of(DP_TEST_CRC_SUPPORTED) // (1 << 5)
+					ofd(0xc0)
+				}
+				
+				dumpnotzero(0x247, 0x248)
+				
+				ob(DP_PHY_TEST_PATTERN) { // 0x248
+					sw(DP_PHY_TEST_PATTERN_SEL_MASK) { // 0x7
+						oc(DP_PHY_TEST_PATTERN_NONE        , "PHY_TEST_PATTERN_NONE"        ) // 0x0
+						oc(DP_PHY_TEST_PATTERN_D10_2       , "PHY_TEST_PATTERN_D10_2"       ) // 0x1
+						oc(DP_PHY_TEST_PATTERN_ERROR_COUNT , "PHY_TEST_PATTERN_ERROR_COUNT" ) // 0x2
+						oc(DP_PHY_TEST_PATTERN_PRBS7       , "PHY_TEST_PATTERN_PRBS7"       ) // 0x3
+						oc(DP_PHY_TEST_PATTERN_80BIT_CUSTOM, "PHY_TEST_PATTERN_80BIT_CUSTOM") // 0x4
+						oc(DP_PHY_TEST_PATTERN_CP2520      , "PHY_TEST_PATTERN_CP2520"      ) // 0x5
+						od("?%d (unknown PHY_TEST_PATTERN)", val & DP_PHY_TEST_PATTERN_SEL_MASK)
+					}
+					ofd(0xf8)
+				}
+				
+				if (d8(DP_DPCD_REV) < 0x14) {
+					#define DP_TEST_FAUX 0x249 /* 1.2 */
+					# define DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_SEL_MASK (7 << 0)
+					# define DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_NONE        0
+					# define DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_D10_2       1
+					# define DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_ERROR_COUNT 2
+					# define DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_PRBS7       3
+					# define DP_FAUX_BACK_CHANNEL_ERROR_COUNT_REQUEST (1 << 3)
+					
+					ob(DP_TEST_FAUX) { // 0x249 /* 1.2 */
+						sw(DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_SEL_MASK) { // (7 << 0)
+							oc(DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_NONE        , "FAUX_FORWARD_CHANNEL_TEST_PATTERN_NONE"        ) // 0x0
+							oc(DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_D10_2       , "FAUX_FORWARD_CHANNEL_TEST_PATTERN_D10_2"       ) // 0x1
+							oc(DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_ERROR_COUNT , "FAUX_FORWARD_CHANNEL_TEST_PATTERN_ERROR_COUNT" ) // 0x2
+							oc(DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_PRBS7       , "FAUX_FORWARD_CHANNEL_TEST_PATTERN_PRBS7"       ) // 0x3
+							od("?%d (unknown FAUX_FORWARD_CHANNEL_TEST_PATTERN)", val & DP_FAUX_FORWARD_CHANNEL_TEST_PATTERN_SEL_MASK)
+						}
+						of(DP_FAUX_BACK_CHANNEL_ERROR_COUNT_REQUEST)
+						ofd(0xf0)
+					}
+				}
+				else {
+					ob(DP_PHY_SQUARE_PATTERN) { // 0x249
+						cp("0x%02x", val);
+					}
+				}
+				
+				ob16(DP_TEST_HBR2_SCRAMBLER_RESET) { // 0x24A, 0x24B
+					oi();
+				}
+				
+				dumpnotzero(0x24c, 0x250)
+				
+				if (!iszero(DP_TEST_80BIT_CUSTOM_PATTERN_7_0, DP_TEST_80BIT_CUSTOM_PATTERN_7_0 + 10)) { // 0x250 - 0x259
+					#define DP_TEST_80BIT_CUSTOM_PATTERN DP_TEST_80BIT_CUSTOM_PATTERN_7_0
+					obx(DP_TEST_80BIT_CUSTOM_PATTERN)
+					cp("0x");
+					for (int i = 0; i < 10; i++) {
+						cprintf("%02x", d8(DP_TEST_80BIT_CUSTOM_PATTERN_7_0 + 9 - i));
+					}
+				}
+				
+				dumpnotzero(0x25a, 0x260)
+				
+				ob(DP_TEST_RESPONSE) { // 0x260
+					of(DP_TEST_ACK) // (1 << 0)
+					of(DP_TEST_NAK) // (1 << 1)
+					of(DP_TEST_EDID_CHECKSUM_WRITE) // (1 << 2)
+					ofd(0xf8)
+				}
+				
+				ob(DP_TEST_EDID_CHECKSUM) { // 0x261
 					cp("0x%02x", val);
 				}
-			}
-
-			ob16(DP_TEST_HBR2_SCRAMBLER_RESET) { // 0x24A, 0x24B
-				oi();
-			}
-			
-			dumpnotzero(0x24c, 0x250)
-
-			if (!iszero(DP_TEST_80BIT_CUSTOM_PATTERN_7_0, DP_TEST_80BIT_CUSTOM_PATTERN_7_0 + 10)) { // 0x250 - 0x259
-				#define DP_TEST_80BIT_CUSTOM_PATTERN DP_TEST_80BIT_CUSTOM_PATTERN_7_0
-				obx(DP_TEST_80BIT_CUSTOM_PATTERN)
-				cp("0x");
-				for (int i = 0; i < 10; i++) {
-					cprintf("%02x", d8(DP_TEST_80BIT_CUSTOM_PATTERN_7_0 + 9 - i));
-				}
-			}
-			
-			dumpnotzero(0x25a, 0x260)
-
-			ob(DP_TEST_RESPONSE) { // 0x260
-				of(DP_TEST_ACK) // (1 << 0)
-				of(DP_TEST_NAK) // (1 << 1)
-				of(DP_TEST_EDID_CHECKSUM_WRITE) // (1 << 2)
-				ofd(0xf8)
-			}
-
-			ob(DP_TEST_EDID_CHECKSUM) { // 0x261
-				cp("0x%02x", val);
-			}
-
-			#define DP_TEST_FAUX_BACK_CHANNEL_TEST_PATTERN 0x262 /* 1.2 */
-			# define DP_FAUX_BACK_CHANNEL_TEST_PATTERN_SEL_MASK (7 << 0)
-			# define DP_FAUX_BACK_CHANNEL_TEST_PATTERN_NONE        0
-			# define DP_FAUX_BACK_CHANNEL_TEST_PATTERN_D10_2       1
-			# define DP_FAUX_BACK_CHANNEL_TEST_PATTERN_ERROR_COUNT 2
-			# define DP_FAUX_BACK_CHANNEL_TEST_PATTERN_PRBS7       3
-
-			ob(DP_TEST_FAUX_BACK_CHANNEL_TEST_PATTERN) { // 0x262 /* 1.2 */
-				sw(DP_FAUX_BACK_CHANNEL_TEST_PATTERN_SEL_MASK) { // (7 << 0)
-					oc(DP_FAUX_BACK_CHANNEL_TEST_PATTERN_NONE        , "FAUX_BACK_CHANNEL_TEST_PATTERN_NONE"        ) // 0x0
-					oc(DP_FAUX_BACK_CHANNEL_TEST_PATTERN_D10_2       , "FAUX_BACK_CHANNEL_TEST_PATTERN_D10_2"       ) // 0x1
-					oc(DP_FAUX_BACK_CHANNEL_TEST_PATTERN_ERROR_COUNT , "FAUX_BACK_CHANNEL_TEST_PATTERN_ERROR_COUNT" ) // 0x2
-					oc(DP_FAUX_BACK_CHANNEL_TEST_PATTERN_PRBS7       , "FAUX_BACK_CHANNEL_TEST_PATTERN_PRBS7"       ) // 0x3
-					od("?%d (unknown FAUX_BACK_CHANNEL_TEST_PATTERN)", val & DP_FAUX_BACK_CHANNEL_TEST_PATTERN_SEL_MASK)
-				}
-				ofd(0xf8)
-			}
-			
-			dumpnotzero(0x263, 0x270)
-
-			# define DP_PHY_SINK_TEST_LANE_SEL_MASK (3 << 4)
-			# define DP_PHY_SINK_TEST_LANE_0 (0 << 4)
-			# define DP_PHY_SINK_TEST_LANE_1 (1 << 4)
-			# define DP_PHY_SINK_TEST_LANE_2 (2 << 4)
-			# define DP_PHY_SINK_TEST_LANE_3 (3 << 4)
-			# define DP_PHY_SINK_TEST_LANE_EN (1 << 7)
-			ob(DP_TEST_SINK) { // 0x270
-				of(DP_TEST_SINK_START) // (1 << 0)
-				ofd(0x0e)
-				sw(DP_PHY_SINK_TEST_LANE_SEL_MASK) { // (3 << 4)
-					oc(DP_PHY_SINK_TEST_LANE_0, "PHY_SINK_TEST_LANE_0")
-					oc(DP_PHY_SINK_TEST_LANE_1, "PHY_SINK_TEST_LANE_1")
-					oc(DP_PHY_SINK_TEST_LANE_2, "PHY_SINK_TEST_LANE_2")
-					oc(DP_PHY_SINK_TEST_LANE_3, "PHY_SINK_TEST_LANE_3")
-				}
-				ofd(0x40)
-				of(DP_PHY_SINK_TEST_LANE_EN)
-			}
-			
-			ob(DP_TEST_AUDIO_MODE) { // 0x271
-				sw(val & 0x0f) {
-					oc(AUDIO_SAMPLING_RATE_32KHZ   , "32kHz")
-					oc(AUDIO_SAMPLING_RATE_44_1KHZ , "44.1kHz")
-					oc(AUDIO_SAMPLING_RATE_48KHZ   , "48kHz")
-					oc(AUDIO_SAMPLING_RATE_88_2KHZ , "88.2kHz")
-					oc(AUDIO_SAMPLING_RATE_96KHZ   , "96kHz")
-					oc(AUDIO_SAMPLING_RATE_176_4KHZ, "176.4kHz")
-					oc(AUDIO_SAMPLING_RATE_192KHZ  , "192kHz")
-					od("?%d (unknown AUDIO_SAMPLING_RATE)", val & 0x0f)
-				}
-				sw ((val & 0xf0) >> 4) {
-					oc(AUDIO_CHANNELS_1, "AUDIO_CHANNELS_1")
-					oc(AUDIO_CHANNELS_2, "AUDIO_CHANNELS_2")
-					oc(AUDIO_CHANNELS_3, "AUDIO_CHANNELS_3")
-					oc(AUDIO_CHANNELS_4, "AUDIO_CHANNELS_4")
-					oc(AUDIO_CHANNELS_5, "AUDIO_CHANNELS_5")
-					oc(AUDIO_CHANNELS_6, "AUDIO_CHANNELS_6")
-					oc(AUDIO_CHANNELS_7, "AUDIO_CHANNELS_7")
-					oc(AUDIO_CHANNELS_8, "AUDIO_CHANNELS_8")
-					od("?%d (unknown AUDIO_CHANNELS)", ((val & 0xf0) >> 4) + 1)
-				}
-			}
-
-			ob(DP_TEST_AUDIO_PATTERN_TYPE) { // 0x272
-				switch (val) {
-					oc(AUDIO_TEST_PATTERN_OPERATOR_DEFINED, "OPERATOR_DEFINED")
-					oc(AUDIO_TEST_PATTERN_SAWTOOTH, "SAWTOOTH")
-					od("?%d (unknown AUDIO_TEST_PATTERN)", val)
-				}
-			}
 				
-			ob(DP_TEST_AUDIO_PERIOD_CH1) { // 0x273
-				oi()
+				#define DP_TEST_FAUX_BACK_CHANNEL_TEST_PATTERN 0x262 /* 1.2 */
+				# define DP_FAUX_BACK_CHANNEL_TEST_PATTERN_SEL_MASK (7 << 0)
+				# define DP_FAUX_BACK_CHANNEL_TEST_PATTERN_NONE        0
+				# define DP_FAUX_BACK_CHANNEL_TEST_PATTERN_D10_2       1
+				# define DP_FAUX_BACK_CHANNEL_TEST_PATTERN_ERROR_COUNT 2
+				# define DP_FAUX_BACK_CHANNEL_TEST_PATTERN_PRBS7       3
+				
+				ob(DP_TEST_FAUX_BACK_CHANNEL_TEST_PATTERN) { // 0x262 /* 1.2 */
+					sw(DP_FAUX_BACK_CHANNEL_TEST_PATTERN_SEL_MASK) { // (7 << 0)
+						oc(DP_FAUX_BACK_CHANNEL_TEST_PATTERN_NONE        , "FAUX_BACK_CHANNEL_TEST_PATTERN_NONE"        ) // 0x0
+						oc(DP_FAUX_BACK_CHANNEL_TEST_PATTERN_D10_2       , "FAUX_BACK_CHANNEL_TEST_PATTERN_D10_2"       ) // 0x1
+						oc(DP_FAUX_BACK_CHANNEL_TEST_PATTERN_ERROR_COUNT , "FAUX_BACK_CHANNEL_TEST_PATTERN_ERROR_COUNT" ) // 0x2
+						oc(DP_FAUX_BACK_CHANNEL_TEST_PATTERN_PRBS7       , "FAUX_BACK_CHANNEL_TEST_PATTERN_PRBS7"       ) // 0x3
+						od("?%d (unknown FAUX_BACK_CHANNEL_TEST_PATTERN)", val & DP_FAUX_BACK_CHANNEL_TEST_PATTERN_SEL_MASK)
+					}
+					ofd(0xf8)
+				}
+				
+				dumpnotzero(0x263, 0x270)
+				
+				# define DP_PHY_SINK_TEST_LANE_SEL_MASK (3 << 4)
+				# define DP_PHY_SINK_TEST_LANE_0 (0 << 4)
+				# define DP_PHY_SINK_TEST_LANE_1 (1 << 4)
+				# define DP_PHY_SINK_TEST_LANE_2 (2 << 4)
+				# define DP_PHY_SINK_TEST_LANE_3 (3 << 4)
+				# define DP_PHY_SINK_TEST_LANE_EN (1 << 7)
+				ob(DP_TEST_SINK) { // 0x270
+					of(DP_TEST_SINK_START) // (1 << 0)
+					ofd(0x0e)
+					sw(DP_PHY_SINK_TEST_LANE_SEL_MASK) { // (3 << 4)
+						oc(DP_PHY_SINK_TEST_LANE_0, "PHY_SINK_TEST_LANE_0")
+						oc(DP_PHY_SINK_TEST_LANE_1, "PHY_SINK_TEST_LANE_1")
+						oc(DP_PHY_SINK_TEST_LANE_2, "PHY_SINK_TEST_LANE_2")
+						oc(DP_PHY_SINK_TEST_LANE_3, "PHY_SINK_TEST_LANE_3")
+					}
+					ofd(0x40)
+					of(DP_PHY_SINK_TEST_LANE_EN)
+				}
+				
+				ob(DP_TEST_AUDIO_MODE) { // 0x271
+					sw(val & 0x0f) {
+						oc(AUDIO_SAMPLING_RATE_32KHZ   , "32kHz")
+						oc(AUDIO_SAMPLING_RATE_44_1KHZ , "44.1kHz")
+						oc(AUDIO_SAMPLING_RATE_48KHZ   , "48kHz")
+						oc(AUDIO_SAMPLING_RATE_88_2KHZ , "88.2kHz")
+						oc(AUDIO_SAMPLING_RATE_96KHZ   , "96kHz")
+						oc(AUDIO_SAMPLING_RATE_176_4KHZ, "176.4kHz")
+						oc(AUDIO_SAMPLING_RATE_192KHZ  , "192kHz")
+						od("?%d (unknown AUDIO_SAMPLING_RATE)", val & 0x0f)
+					}
+					sw ((val & 0xf0) >> 4) {
+						oc(AUDIO_CHANNELS_1, "AUDIO_CHANNELS_1")
+						oc(AUDIO_CHANNELS_2, "AUDIO_CHANNELS_2")
+						oc(AUDIO_CHANNELS_3, "AUDIO_CHANNELS_3")
+						oc(AUDIO_CHANNELS_4, "AUDIO_CHANNELS_4")
+						oc(AUDIO_CHANNELS_5, "AUDIO_CHANNELS_5")
+						oc(AUDIO_CHANNELS_6, "AUDIO_CHANNELS_6")
+						oc(AUDIO_CHANNELS_7, "AUDIO_CHANNELS_7")
+						oc(AUDIO_CHANNELS_8, "AUDIO_CHANNELS_8")
+						od("?%d (unknown AUDIO_CHANNELS)", ((val & 0xf0) >> 4) + 1)
+					}
+				}
+				
+				ob(DP_TEST_AUDIO_PATTERN_TYPE) { // 0x272
+					switch (val) {
+							oc(AUDIO_TEST_PATTERN_OPERATOR_DEFINED, "OPERATOR_DEFINED")
+							oc(AUDIO_TEST_PATTERN_SAWTOOTH, "SAWTOOTH")
+							od("?%d (unknown AUDIO_TEST_PATTERN)", val)
+					}
+				}
+				
+				ob(DP_TEST_AUDIO_PERIOD_CH1) { // 0x273
+					oi()
+				}
+				ob(DP_TEST_AUDIO_PERIOD_CH2) { // 0x274
+					oi()
+				}
+				ob(DP_TEST_AUDIO_PERIOD_CH3) { // 0x275
+					oi()
+				}
+				ob(DP_TEST_AUDIO_PERIOD_CH4) { // 0x276
+					oi()
+				}
+				ob(DP_TEST_AUDIO_PERIOD_CH5) { // 0x277
+					oi()
+				}
+				ob(DP_TEST_AUDIO_PERIOD_CH6) { // 0x278
+					oi()
+				}
+				ob(DP_TEST_AUDIO_PERIOD_CH7) { // 0x279
+					oi()
+				}
+				ob(DP_TEST_AUDIO_PERIOD_CH8) { // 0x27A
+					oi()
+				}
+				
+				dumpnotzero(0x27b, 0x280)
+
+				OUTDENT
 			}
-			ob(DP_TEST_AUDIO_PERIOD_CH2) { // 0x274
-				oi()
-			}
-			ob(DP_TEST_AUDIO_PERIOD_CH3) { // 0x275
-				oi()
-			}
-			ob(DP_TEST_AUDIO_PERIOD_CH4) { // 0x276
-				oi()
-			}
-			ob(DP_TEST_AUDIO_PERIOD_CH5) { // 0x277
-				oi()
-			}
-			ob(DP_TEST_AUDIO_PERIOD_CH6) { // 0x278
-				oi()
-			}
-			ob(DP_TEST_AUDIO_PERIOD_CH7) { // 0x279
-				oi()
-			}
-			ob(DP_TEST_AUDIO_PERIOD_CH8) { // 0x27A
-				oi()
-			}
-			
-			dumpnotzero(0x27b, 0x280)
-			
+
 			if (d8(DP_DPCD_REV) < 0x14) {
-				
+				#define DP_FAUX_FORWARD_CHANNEL_STATUS 0x280 /* 1.2 */
+				#define DP_FAUX_FORWARD_CHANNEL_SYMBOL_LOCK_DONE                (1 << 0)
+				# define DP_FAUX_FORWARD_CHANNEL_VOLTAGE_SWING_ADJ_REQ_MASK     (3 << 1)
+				#  define DP_FAUX_FORWARD_CHANNEL_VOLTAGE_SWING_ADJ_REQ_LEVEL_0 (0 << 1)
+				#  define DP_FAUX_FORWARD_CHANNEL_VOLTAGE_SWING_ADJ_REQ_LEVEL_1 (1 << 1)
+				#  define DP_FAUX_FORWARD_CHANNEL_VOLTAGE_SWING_ADJ_REQ_LEVEL_2 (2 << 1)
+				#  define DP_FAUX_FORWARD_CHANNEL_VOLTAGE_SWING_ADJ_REQ_LEVEL_3 (3 << 1)
+				# define DP_FAUX_FORWARD_CHANNEL_PRE_EMPHASIS_ADJ_REQ_MASK      (3 << 3)
+				#  define DP_FAUX_FORWARD_CHANNEL_PRE_EMPHASIS_ADJ_REQ_LEVEL_0  (0 << 3)
+				#  define DP_FAUX_FORWARD_CHANNEL_PRE_EMPHASIS_ADJ_REQ_LEVEL_1  (1 << 3)
+				#  define DP_FAUX_FORWARD_CHANNEL_PRE_EMPHASIS_ADJ_REQ_LEVEL_2  (2 << 3)
+				#  define DP_FAUX_FORWARD_CHANNEL_PRE_EMPHASIS_ADJ_REQ_LEVEL_3  (3 << 3)
+				# define DP_FAUX_FORWARD_CHANNEL_SQUELCH_THRESHOLD_DONE         (1 << 7)
+
 				#define DP_FAUX_BACK_CHANNEL_DRIVE_SET 0x281 /* 1.2 */
 				# define DP_FAUX_BACK_CHANNEL_VOLTAGE_SWING_SET_MASK (3 << 0)
 				# define DP_FAUX_BACK_CHANNEL_VOLTAGE_SWING_LEVEL_0 (0 << 0)
@@ -1918,6 +1965,24 @@ void parsedpcd(UInt8* dpcd) {
 				# define DP_FAUX_BACK_CHANNEL_SYMBOL_ERROR_COUNT_DISPARITY (1 << 6)
 				# define DP_FAUX_BACK_CHANNEL_SYMBOL_ERROR_COUNT_SYMBOL (2 << 6)
 				# define DP_FAUX_BACK_CHANNEL_SYMBOL_ERROR_COUNT_SEL_MASK (3 << 6)
+
+				ob(DP_FAUX_FORWARD_CHANNEL_STATUS) { // 0x280 /* 1.2 */
+					of(DP_FAUX_FORWARD_CHANNEL_SYMBOL_LOCK_DONE) // (1 << 0)
+					sw(DP_FAUX_FORWARD_CHANNEL_VOLTAGE_SWING_ADJ_REQ_MASK) { // (3 << 1)
+						oc(DP_FAUX_FORWARD_CHANNEL_VOLTAGE_SWING_ADJ_REQ_LEVEL_0, "VOLTAGE_SWING_ADJ_REQ_LEVEL_0") // (0 << 1)
+						oc(DP_FAUX_FORWARD_CHANNEL_VOLTAGE_SWING_ADJ_REQ_LEVEL_1, "VOLTAGE_SWING_ADJ_REQ_LEVEL_1") // (1 << 1)
+						oc(DP_FAUX_FORWARD_CHANNEL_VOLTAGE_SWING_ADJ_REQ_LEVEL_2, "VOLTAGE_SWING_ADJ_REQ_LEVEL_2") // (2 << 1)
+						oc(DP_FAUX_FORWARD_CHANNEL_VOLTAGE_SWING_ADJ_REQ_LEVEL_3, "VOLTAGE_SWING_ADJ_REQ_LEVEL_3") // (3 << 1)
+					}
+					sw(DP_FAUX_FORWARD_CHANNEL_PRE_EMPHASIS_ADJ_REQ_MASK) { // (3 << 3)
+						oc(DP_FAUX_FORWARD_CHANNEL_PRE_EMPHASIS_ADJ_REQ_LEVEL_0, "PRE_EMPHASIS_ADJ_REQ_LEVEL_0") // (0 << 3)
+						oc(DP_FAUX_FORWARD_CHANNEL_PRE_EMPHASIS_ADJ_REQ_LEVEL_1, "PRE_EMPHASIS_ADJ_REQ_LEVEL_1") // (1 << 3)
+						oc(DP_FAUX_FORWARD_CHANNEL_PRE_EMPHASIS_ADJ_REQ_LEVEL_2, "PRE_EMPHASIS_ADJ_REQ_LEVEL_2") // (2 << 3)
+						oc(DP_FAUX_FORWARD_CHANNEL_PRE_EMPHASIS_ADJ_REQ_LEVEL_3, "PRE_EMPHASIS_ADJ_REQ_LEVEL_3") // (3 << 3)
+					}
+					of(DP_FAUX_FORWARD_CHANNEL_SQUELCH_THRESHOLD_DONE) // (1 << 0)
+					ofd(0x60)
+				}
 
 				ob(DP_FAUX_BACK_CHANNEL_DRIVE_SET) { // 0x281 /* 1.2 */
 					sw(DP_FAUX_BACK_CHANNEL_VOLTAGE_SWING_SET_MASK) { // (3 << 0)
@@ -2257,8 +2322,8 @@ void parsedpcd(UInt8* dpcd) {
 		if (!iszero(0x02000, 0x02200)) {
 			iprintf("DPRX ESI (Event Status Indicator)"); INDENT
 
-			dumpnotzero(0x02000, 0x02002)
-			
+			dumpnotzero(0x02000, 0x02002, "RESERVED for USB-over-AUX");
+
 			ob(DP_SINK_COUNT_ESI) { // 0x2002   /* same as 0x200 */
 				cp("%d", DP_GET_SINK_COUNT(val));
 				of(DP_SINK_CP_READY) // (1 << 6)
@@ -2386,7 +2451,7 @@ void parsedpcd(UInt8* dpcd) {
 				switch (val) {
 					oc( 6, "RBR")
 					oc(10, "HBR")
-					oc(12, "3_24 (AppleVGA)")
+					oc(12, "RBR2")
 					oc(20, "HBR2")
 					oc(30, "HBR3")
 					od("?%gGbps (unknown)", 0.27 * val)
@@ -2522,7 +2587,14 @@ void parsedpcd(UInt8* dpcd) {
 				of(DP_VSC_EXT_CEA_SDP_CHAINING_SUPPORTED) // (1 << 7)  /* DP 1.4 */
 			}
 
-			dumpnotzero(0x02211, 0x02215)
+			dumpnotzero(0x02211, 0x02213)
+
+			ob(DP_DPRX_FEATURE_ENUMERATION_LIST_CONT_1) { // 0x2214 /* 2.0 E11 */
+				of(DP_ADAPTIVE_SYNC_SDP_SUPPORTED) // (1 << 0)
+				of(DP_AS_SDP_FIRST_HALF_LINE_OR_3840_PIXEL_CYCLE_WINDOW_NOT_SUPPORTED) // (1 << 1)
+				of(DP_VSC_EXT_SDP_FRAMEWORK_VERSION_1_SUPPORTED) // (1 << 4)
+				ofd(0xec)
+			}
 
 			ob(DP_128B132B_SUPPORTED_LINK_RATES) { // 0x2215 /* 2.0 */
 				ofs(DP_UHBR10, "UHBR 10") // (1 << 0)
@@ -2874,32 +2946,32 @@ void parsedpcd(UInt8* dpcd) {
 		if (!iszero(0x69000, 0x6a000)) {
 			iprintf("DP HDCP 2.2 Parameters"); INDENT
 
-#define DP_HDCP_2_2_REG_RTX         	DP_HDCP_2_2_REG_RTX_OFFSET
-#define DP_HDCP_2_2_REG_TXCAPS			DP_HDCP_2_2_REG_TXCAPS_OFFSET
-#define DP_HDCP_2_2_REG_CERT_RX			DP_HDCP_2_2_REG_CERT_RX_OFFSET
-#define DP_HDCP_2_2_REG_RRX		    	DP_HDCP_2_2_REG_RRX_OFFSET
-#define DP_HDCP_2_2_REG_RX_CAPS			DP_HDCP_2_2_REG_RX_CAPS_OFFSET
-#define DP_HDCP_2_2_REG_EKPUB_KM		DP_HDCP_2_2_REG_EKPUB_KM_OFFSET
-#define DP_HDCP_2_2_REG_EKH_KM_WR		DP_HDCP_2_2_REG_EKH_KM_WR_OFFSET
-#define DP_HDCP_2_2_REG_M				DP_HDCP_2_2_REG_M_OFFSET
-#define DP_HDCP_2_2_REG_HPRIME			DP_HDCP_2_2_REG_HPRIME_OFFSET
-#define DP_HDCP_2_2_REG_EKH_KM_RD		DP_HDCP_2_2_REG_EKH_KM_RD_OFFSET
-#define DP_HDCP_2_2_REG_RN				DP_HDCP_2_2_REG_RN_OFFSET
-#define DP_HDCP_2_2_REG_LPRIME			DP_HDCP_2_2_REG_LPRIME_OFFSET
-#define DP_HDCP_2_2_REG_EDKEY_KS		DP_HDCP_2_2_REG_EDKEY_KS_OFFSET
-#define	DP_HDCP_2_2_REG_RIV				DP_HDCP_2_2_REG_RIV_OFFSET
-#define DP_HDCP_2_2_REG_RXINFO			DP_HDCP_2_2_REG_RXINFO_OFFSET
-#define DP_HDCP_2_2_REG_SEQ_NUM_V		DP_HDCP_2_2_REG_SEQ_NUM_V_OFFSET
-#define DP_HDCP_2_2_REG_VPRIME			DP_HDCP_2_2_REG_VPRIME_OFFSET
-#define DP_HDCP_2_2_REG_RECV_ID_LIST	DP_HDCP_2_2_REG_RECV_ID_LIST_OFFSET
-#define DP_HDCP_2_2_REG_V				DP_HDCP_2_2_REG_V_OFFSET
-#define DP_HDCP_2_2_REG_SEQ_NUM_M		DP_HDCP_2_2_REG_SEQ_NUM_M_OFFSET
-#define DP_HDCP_2_2_REG_K				DP_HDCP_2_2_REG_K_OFFSET
-#define DP_HDCP_2_2_REG_STREAM_ID_TYPE	DP_HDCP_2_2_REG_STREAM_ID_TYPE_OFFSET
-#define DP_HDCP_2_2_REG_MPRIME			DP_HDCP_2_2_REG_MPRIME_OFFSET
-#define DP_HDCP_2_2_REG_RXSTATUS		DP_HDCP_2_2_REG_RXSTATUS_OFFSET
-#define DP_HDCP_2_2_REG_STREAM_TYPE		DP_HDCP_2_2_REG_STREAM_TYPE_OFFSET
-#define DP_HDCP_2_2_REG_DBG				DP_HDCP_2_2_REG_DBG_OFFSET
+			#define DP_HDCP_2_2_REG_RTX         	DP_HDCP_2_2_REG_RTX_OFFSET
+			#define DP_HDCP_2_2_REG_TXCAPS			DP_HDCP_2_2_REG_TXCAPS_OFFSET
+			#define DP_HDCP_2_2_REG_CERT_RX			DP_HDCP_2_2_REG_CERT_RX_OFFSET
+			#define DP_HDCP_2_2_REG_RRX		    	DP_HDCP_2_2_REG_RRX_OFFSET
+			#define DP_HDCP_2_2_REG_RX_CAPS			DP_HDCP_2_2_REG_RX_CAPS_OFFSET
+			#define DP_HDCP_2_2_REG_EKPUB_KM		DP_HDCP_2_2_REG_EKPUB_KM_OFFSET
+			#define DP_HDCP_2_2_REG_EKH_KM_WR		DP_HDCP_2_2_REG_EKH_KM_WR_OFFSET
+			#define DP_HDCP_2_2_REG_M				DP_HDCP_2_2_REG_M_OFFSET
+			#define DP_HDCP_2_2_REG_HPRIME			DP_HDCP_2_2_REG_HPRIME_OFFSET
+			#define DP_HDCP_2_2_REG_EKH_KM_RD		DP_HDCP_2_2_REG_EKH_KM_RD_OFFSET
+			#define DP_HDCP_2_2_REG_RN				DP_HDCP_2_2_REG_RN_OFFSET
+			#define DP_HDCP_2_2_REG_LPRIME			DP_HDCP_2_2_REG_LPRIME_OFFSET
+			#define DP_HDCP_2_2_REG_EDKEY_KS		DP_HDCP_2_2_REG_EDKEY_KS_OFFSET
+			#define	DP_HDCP_2_2_REG_RIV				DP_HDCP_2_2_REG_RIV_OFFSET
+			#define DP_HDCP_2_2_REG_RXINFO			DP_HDCP_2_2_REG_RXINFO_OFFSET
+			#define DP_HDCP_2_2_REG_SEQ_NUM_V		DP_HDCP_2_2_REG_SEQ_NUM_V_OFFSET
+			#define DP_HDCP_2_2_REG_VPRIME			DP_HDCP_2_2_REG_VPRIME_OFFSET
+			#define DP_HDCP_2_2_REG_RECV_ID_LIST	DP_HDCP_2_2_REG_RECV_ID_LIST_OFFSET
+			#define DP_HDCP_2_2_REG_V				DP_HDCP_2_2_REG_V_OFFSET
+			#define DP_HDCP_2_2_REG_SEQ_NUM_M		DP_HDCP_2_2_REG_SEQ_NUM_M_OFFSET
+			#define DP_HDCP_2_2_REG_K				DP_HDCP_2_2_REG_K_OFFSET
+			#define DP_HDCP_2_2_REG_STREAM_ID_TYPE	DP_HDCP_2_2_REG_STREAM_ID_TYPE_OFFSET
+			#define DP_HDCP_2_2_REG_MPRIME			DP_HDCP_2_2_REG_MPRIME_OFFSET
+			#define DP_HDCP_2_2_REG_RXSTATUS		DP_HDCP_2_2_REG_RXSTATUS_OFFSET
+			#define DP_HDCP_2_2_REG_STREAM_TYPE		DP_HDCP_2_2_REG_STREAM_TYPE_OFFSET
+			#define DP_HDCP_2_2_REG_DBG				DP_HDCP_2_2_REG_DBG_OFFSET
 
 			dumpnotzero(DP_HDCP_2_2_REG_RTX, DP_HDCP_2_2_REG_RTX + 8, "HDCP_2_2_REG_RTX") // 0x69000
 
@@ -2999,9 +3071,61 @@ void parsedpcd(UInt8* dpcd) {
 			olf; OUTDENT
 		}
 
-		if (!iszero(0x6a000, 0xf0000)) {
+		if (!iszero(0x6a000, 0xe0000)) {
 			iprintf("Undefined"); INDENT
-			dumpnotzero(0x6a000, 0xf0000)
+			dumpnotzero(0x6a000, 0xe0000)
+			olf; OUTDENT
+		}
+
+		if (!iszero(0xe0000, 0xe0040)) {
+			iprintf("USB4 DPCD BW Allocation Registers"); INDENT
+
+			dumpnotzero(0xe0000, 0xe000d)
+			ob(DP_TUNNELING_CAPABILITIES) { // 0xE000D /* 1.4a */
+				ofd(0xff)
+			}
+			ob(USB4_DRIVER_ID) { // 0xE000F /* 1.4a */
+				ofd(0xff)
+			}
+
+			dumpnotzero(0xe0010, 0xe001b)
+
+			#define DP_USB4_ROUTER_TOPOLOGY_ID        0xe001b
+			if (!iszero(DP_USB4_ROUTER_TOPOLOGY_ID, DP_USB4_ROUTER_TOPOLOGY_ID + DPCD_USB4_TOPOLOGY_ID_LEN)) {
+				obx(DP_USB4_ROUTER_TOPOLOGY_ID);
+				for (int i = 0; i < DPCD_USB4_TOPOLOGY_ID_LEN; i++) {
+					cprintf("%02x", d8(DP_USB4_ROUTER_TOPOLOGY_ID + i));
+				}
+			}
+
+			dumpnotzero(0xe0010, 0xe0020)
+			ob(USB4_DRIVER_BW_CAPABILITY) { // 0xE0020 /* 1.4a */
+				ofd(0xff)
+			}
+			ob(DP_IN_ADAPTER_TUNNEL_INFO) { // 0xE0021 /* 1.4a */
+				ofd(0xff)
+			}
+			ob(DP_BW_GRANULALITY) { // 0xE0022 /* 1.4a */
+				ofd(0xff)
+			}
+			ob(ESTIMATED_BW) { // 0xE0023 /* 1.4a */
+				ofd(0xff)
+			}
+			ob(ALLOCATED_BW) { // 0xE0024 /* 1.4a */
+				ofd(0xff)
+			}
+			ob(DP_TUNNELING_STATUS) { // 0xE0025 /* 1.4a */
+				ofd(0xff)
+			}
+			dumpnotzero(0xe0026, 0xe002f)
+			ob(DPTX_BW_ALLOCATION_MODE_CONTROL) { // 0xE0030 /* 1.4a */
+				ofd(0xff)
+			}
+			ob(REQUESTED_BW) { // 0xE0031 /* 1.4a */
+				ofd(0xff)
+			}
+			dumpnotzero(0xe0032, 0xe0040)
+
 			olf; OUTDENT
 		}
 
@@ -3017,7 +3141,7 @@ void parsedpcd(UInt8* dpcd) {
 					oc(DP_LINK_RATE_TABLE, "LINK_RATE_TABLE") // 0x00    /* eDP 1.4 */
 					oc(DP_LINK_BW_1_62, "RBR") // 0x06
 					oc(DP_LINK_BW_2_7, "HBR") // 0x0a
-					oc(12, "3_24 (AppleVGA)") // 0x0c
+					oc(12, "RBR2") // 0x0c
 					oc(DP_LINK_BW_5_4, "HBR2") // 0x14    /* 1.2 */
 					oc(DP_LINK_BW_8_1, "HBR3") // 0x1e    /* 1.4 */
 					oc(DP_LINK_BW_10, "UHBR 10") // 0x01    /* 2.0 128b/132b Link Layer */
