@@ -359,7 +359,6 @@ void DumpOneDisplayPortMessageBody(void *bodyData, int bodyLength, bool isReply)
 				break;
 			}
 			case DP_RESOURCE_STATUS_NOTIFY: {
-				msg3parseEnd = (Sideband_MSG3 *)&body->request.Resource_Status_Notify.end;
 				cprintf(" port=%d zeros=%d , guid=%s Available_PBN=%d",
 					body->request.Resource_Status_Notify.Port_Number,
 					body->request.Resource_Status_Notify.zeros,
