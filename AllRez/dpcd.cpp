@@ -99,12 +99,12 @@ int dpcdranges[] = {
 	-1
 };
 
-static bool ismemzero(UInt8 *start, UInt8 *stop) {
+static bool ismemzero(uint8_t *start, uint8_t *stop) {
 	for ( ; start < stop; start++) if (*start) return false;
 	return true;
 }
 
-void parsedpcd(UInt8* dpcd) {
+void parsedpcd(uint8_t* dpcd) {
 	int dpcdRangeNdx;
 	iprintf("dpcd = {\n"); INDENT
 	for (dpcdRangeNdx = 0; dpcdranges[dpcdRangeNdx] >= 0; dpcdRangeNdx += 2) {
