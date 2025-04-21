@@ -78,11 +78,12 @@ kern_return_t iogDiagnose(IOGDiagnose * reportP,
                 uint64_t    scalerParams[] = {reportLength, version};
                 uint32_t    scalerParamsCount = ((uint32_t)sizeof(scalerParams) / (uint32_t)sizeof(scalerParams[0]));
 
-                err = kIOReturnUnsupported;
                 API_OR_SDK_AVAILABLE_BEGIN(10.5, IOConnectCallMethod) {
                     err = IOConnectCallMethod(connect, kIOGSharedInterface_IOGDiagnose,
                                              scalerParams, scalerParamsCount, NULL, 0,
                                              NULL, NULL, reportP, &reportLength);
+                } API_OR_SDK_AVAILABLE_ELSE {
+                    err = kIOReturnUnsupported;
                 } API_OR_SDK_AVAILABLE_END
 #endif
                 if (kIOReturnSuccess != err)

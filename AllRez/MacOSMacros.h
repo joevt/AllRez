@@ -374,6 +374,7 @@
 #pragma message ARCHITECTURE " min:" STR(MAC_OS_X_VERSION_MIN_REQUIRED) " max:" STR(MAC_OS_X_VERSION_MAX_ALLOWED) " sdk:" STR(MAC_OS_X_VERSION_SDK)
 
 #define API_OR_SDK_AVAILABLE_BEGIN(SDK, name) { { { if (&name != NULL) {
+#define API_OR_SDK_AVAILABLE_ELSE } else {
 #define API_OR_SDK_AVAILABLE_END } } } }
 
 #if defined(__has_builtin)
