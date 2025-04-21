@@ -268,8 +268,8 @@ static char * GetOneFlagsStr(UInt64 flags) {
 			(flags & 0xf0000000) == 0xe0000000         ?                 "¿E<<28," :
 			(flags & 0xf0000000) == 0xf0000000         ?                 "¿F<<28," : ""
 		);
+		RemoveTrailingComma(flagsstr);
 	}
-	RemoveTrailingComma(flagsstr);
 	return flagsstr;
 } // GetOneFlagsStr
 
@@ -629,7 +629,7 @@ static char * DumpOneDetailedTimingInformationPtr(char * buf, size_t bufSize, vo
 	}
 	else if (size >= sizeof(IODetailedTimingInformationV1)) {
 		IODetailedTimingInformationV1 *timing = (IODetailedTimingInformationV1 *)IOFBDetailedTiming;
-		inc += scnprintf(buf+inc, bufSize-inc, " %ux%u@%.3fHz %.3fkHz %.3fMHz  h(%u %u %u)  v(%u %u %u)  border(h%u v%u)",
+		scnprintf(buf+inc, bufSize-inc, " %ux%u@%.3fHz %.3fkHz %.3fMHz  h(%u %u %u)  v(%u %u %u)  border(h%u v%u)",
 			(uint32_t)timing->horizontalActive,               // pixels
 			(uint32_t)timing->verticalActive,                 // lines
 			timing->pixelClock * 1.0 / ((timing->horizontalActive + timing->horizontalBlanking) * (timing->verticalActive + timing->verticalBlanking)), // Hz
@@ -666,7 +666,7 @@ static char * DumpOneTimingInformationPtr(char * buf, size_t bufSize, IOTimingIn
 	);
 	
 	if (info->flags & kIODetailedTimingValid) {
-		inc += scnprintf(buf+inc, bufSize-inc, " DetailedTimingInformation = { %s }",
+		scnprintf(buf+inc, bufSize-inc, " DetailedTimingInformation = { %s }",
 			DumpOneDetailedTimingInformationPtr(timinginfo, sizeof(timinginfo), &info->detailedInfo, detailedSize, modeAlias)
 		);
 	}
@@ -718,7 +718,7 @@ static char * DumpOneDetailedTimingInformationPtrFromEdid(char * buf, size_t buf
 		(uint32_t)timing->verticalBorderBottom           // lines
 	);
 
-	inc += scnprintf(buf+inc, bufSize-inc,
+	scnprintf(buf+inc, bufSize-inc,
 		"  signal(%s%s%s%s%s%s%s%s) levels:%s",
 		(timing->signalConfig & kIODigitalSignal      ) ?               "digital," : "",
 		(timing->signalConfig & kIOAnalogSetupExpected) ? "analog setup expected," : "",
@@ -790,7 +790,7 @@ static char * DumpOneFBDisplayModeDescriptionPtr(char * buf, size_t bufSize, IOF
 	inc += scnprintf(buf+inc, bufSize-inc, "DisplayModeInformation = { %s },",
 		DumpOneDisplayModeInformationPtr(temp, sizeof(temp), (IODisplayModeInformation_10_8*)&desc->info)
 	);
-	inc += scnprintf(buf+inc, bufSize-inc, " TimingInformation = { %s }",
+	scnprintf(buf+inc, bufSize-inc, " TimingInformation = { %s }",
 		DumpOneTimingInformationPtr(temp, sizeof(temp), &desc->timingInfo, sizeof(desc->timingInfo.detailedInfo.v2), modeAlias)
 	);
 	return result;
@@ -1035,7 +1035,7 @@ static void DumpOneDisplayTimingRange(CFDataRef IOFBTimingRange) {
 
 static char * DumpOneDisplayTimingRangeFromEdid(char *buf, size_t bufSize, IODisplayTimingRangeV1_12 *range) {
 	int inc = 0;
-	inc += scnprintf(buf+inc, bufSize-inc,
+	scnprintf(buf+inc, bufSize-inc,
 		"%u…%uHz %.3f…%.3fkHz %.3fMHz maxActivePixels:%ux%u",
 
 		(uint32_t)range->minFrameRate,                  // Hz
@@ -1916,12 +1916,12 @@ static char * GetAttributeCodeStr(char *buf, size_t bufSize, UInt64 attribute, c
 	char* atrc = (char*)&attribute;
 	int x = 0;
 	if (attribute & 0xffffffff00000000ULL)
-		x += scnprintf(buf + x, bufSize - x, "?0x%llx", attribute);
+		scnprintf(buf + x, bufSize - x, "?0x%llx", attribute);
 	else {
 		if (atrc[3] || !nullStr) x += scnprintf(buf + x, bufSize - x, "%c", atrc[3]); else x += scnprintf(buf + x, bufSize - x, "%s", nullStr);
 		if (atrc[2] || !nullStr) x += scnprintf(buf + x, bufSize - x, "%c", atrc[2]); else x += scnprintf(buf + x, bufSize - x, "%s", nullStr);
 		if (atrc[1] || !nullStr) x += scnprintf(buf + x, bufSize - x, "%c", atrc[1]); else x += scnprintf(buf + x, bufSize - x, "%s", nullStr);
-		if (atrc[0] || !nullStr) x += scnprintf(buf + x, bufSize - x, "%c", atrc[0]); else x += scnprintf(buf + x, bufSize - x, "%s", nullStr);
+		if (atrc[0] || !nullStr)      scnprintf(buf + x, bufSize - x, "%c", atrc[0]); else      scnprintf(buf + x, bufSize - x, "%s", nullStr);
 	}
 	return buf;
 } // GetAttributeCodeStr
@@ -2161,10 +2161,10 @@ void DumpOneAttribute(UInt64 attribute, bool set, bool forConnection, void *valu
 			case kConnectionSupportsAppleSense:
 			case kConnectionSupportsHLDDCSense:
 			case kConnectionSupportsLLDDCSense:
-				inc += scnprintf(buf+inc, bufSize-inc, "n/a");
+				scnprintf(buf+inc, bufSize-inc, "n/a");
 				break;
 			default:
-				inc += scnprintf(buf+inc, bufSize-inc, "NULL");
+				scnprintf(buf+inc, bufSize-inc, "NULL");
 				break;
 		}
 	}
@@ -2193,14 +2193,14 @@ void DumpOneAttribute(UInt64 attribute, bool set, bool forConnection, void *valu
 
 		switch (attribute) {
 			case kConnectionFlags:
-				inc += scnprintf(buf+inc, bufSize-inc, "%s%s%s",
+				scnprintf(buf+inc, bufSize-inc, "%s%s%s",
 					value & kIOConnectionBuiltIn    ?    "BuiltIn," : "",
 					value & kIOConnectionStereoSync ? "StereoSync," : "",
 					UNKNOWN_FLAG(value & 0xffff77ff)
 				); break;
 
 			case kConnectionSyncFlags:
-				inc += scnprintf(buf+inc, bufSize-inc, "%s%s%s%s%s%s%s%s%s",
+				scnprintf(buf+inc, bufSize-inc, "%s%s%s%s%s%s%s%s%s",
 					value & kIOHSyncDisable          ?          "HSyncDisable," : "",
 					value & kIOVSyncDisable          ?          "VSyncDisable," : "",
 					value & kIOCSyncDisable          ?          "CSyncDisable," : "",
@@ -2214,7 +2214,7 @@ void DumpOneAttribute(UInt64 attribute, bool set, bool forConnection, void *valu
 
 			case kConnectionHandleDisplayPortEvent:
 				if (set) {
-					inc += scnprintf(buf+inc, bufSize-inc, "%s",
+					scnprintf(buf+inc, bufSize-inc, "%s",
 						value == kIODPEventStart                       ?                       "Start" :
 						value == kIODPEventIdle                        ?                        "Idle" :
 						value == kIODPEventForceRetrain                ?                "ForceRetrain" :
@@ -2235,7 +2235,7 @@ void DumpOneAttribute(UInt64 attribute, bool set, bool forConnection, void *valu
 
 			case kConnectionColorMode:
 			case kConnectionColorModesSupported:
-				inc += scnprintf(buf+inc, bufSize-inc, "%s%s%s%s%s%s%s",
+				scnprintf(buf+inc, bufSize-inc, "%s%s%s%s%s%s%s",
 					value == kIODisplayColorModeReserved  ?    "Reserved" : "",
 					value & kIODisplayColorModeRGB        ?        "RGB," : "",
 					value & kIODisplayColorModeYCbCr422   ?        "422," : "",
@@ -2248,7 +2248,7 @@ void DumpOneAttribute(UInt64 attribute, bool set, bool forConnection, void *valu
 			case kConnectionColorDepthsSupported:
 			case kConnectionControllerDepthsSupported:
 			case kConnectionControllerColorDepth:
-				inc += scnprintf(buf+inc, bufSize-inc, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
+				scnprintf(buf+inc, bufSize-inc, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
 					value == kIODisplayRGBColorComponentBitsUnknown ? "Unknown" : "",
 					value & kIODisplayRGBColorComponentBits6        ?  "RGB 6," : "",
 					value & kIODisplayRGBColorComponentBits8        ?  "RGB 8," : "",
@@ -2272,7 +2272,7 @@ void DumpOneAttribute(UInt64 attribute, bool set, bool forConnection, void *valu
 				); break;
 
 			case kConnectionControllerDitherControl:
-				inc += scnprintf(buf+inc, bufSize-inc, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
+				scnprintf(buf+inc, bufSize-inc, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
 					((value >> kIODisplayDitherRGBShift     ) & 0xff) == kIODisplayDitherDisable         ?          "RGB Disabled," : "",
 					((value >> kIODisplayDitherRGBShift     ) & 0xff) == kIODisplayDitherAll             ?               "RGB All," : "",
 					((value >> kIODisplayDitherRGBShift     ) & 0xff) & kIODisplayDitherSpatial          ?           "RGB Spatial," : "",
@@ -2298,13 +2298,13 @@ void DumpOneAttribute(UInt64 attribute, bool set, bool forConnection, void *valu
 				); break;
 				
 			case kConnectionDisplayFlags:
-				inc += scnprintf(buf+inc, bufSize-inc, "%s%s",
+				scnprintf(buf+inc, bufSize-inc, "%s%s",
 					value == kIODisplayNeedsCEAUnderscan ? "NeedsCEAUnderscan," : "",
 						 UNKNOWN_FLAG(value & 0xfffffffe)
 				); break;
 
 			case kIOMirrorAttribute:
-				inc += scnprintf(buf+inc, bufSize-inc,
+				scnprintf(buf+inc, bufSize-inc,
 					"%s%s%s%s",
 					value & kIOMirrorIsPrimary  ?  "kIOMirrorIsPrimary," : "",
 					value & kIOMirrorHWClipped  ?  "kIOMirrorHWClipped," : "",
@@ -2313,7 +2313,7 @@ void DumpOneAttribute(UInt64 attribute, bool set, bool forConnection, void *valu
 				); break;
 
 			case kIOMirrorDefaultAttribute:
-				inc += scnprintf(buf+inc, bufSize-inc, "%s%s%s%s%s%s%s",
+				scnprintf(buf+inc, bufSize-inc, "%s%s%s%s%s%s%s",
 					value & kIOMirrorDefault        ?        "kIOMirrorDefault," : "",
 					value & kIOMirrorForced         ?         "kIOMirrorForced," : "",
 					value & kIOGPlatformYCbCr       ?       "kIOGPlatformYCbCr," : "",
@@ -2330,7 +2330,7 @@ void DumpOneAttribute(UInt64 attribute, bool set, bool forConnection, void *valu
 			case kConnectionOverscan:
 			case kConnectionUnderscan:
 			case kIODisplaySelectedColorModeKey4cc:
-				inc += scnprintf(buf+inc, bufSize-inc, "%ld", (unsigned long)value);
+				scnprintf(buf+inc, bufSize-inc, "%ld", (unsigned long)value);
 				break;
 
 			case 'dith':
@@ -2343,22 +2343,22 @@ void DumpOneAttribute(UInt64 attribute, bool set, bool forConnection, void *valu
 			case kIOFBLimitHDCPAttribute:
 			case kIOFBLimitHDCPStateAttribute:
 			case kConnectionFlushParameters:
-				inc += scnprintf(buf+inc, bufSize-inc, "%s", value == 1 ? "true" : value == 0 ? "false" : UNKNOWN_VALUE(value));
+				scnprintf(buf+inc, bufSize-inc, "%s", value == 1 ? "true" : value == 0 ? "false" : UNKNOWN_VALUE(value));
 				break;
 			
 			case kConnectionProbe:
-				inc += scnprintf(buf+inc, bufSize-inc, "%s", value == kIOFBUserRequestProbe ? "kIOFBUserRequestProbe" : UNKNOWN_VALUE(value));
+				scnprintf(buf+inc, bufSize-inc, "%s", value == kIOFBUserRequestProbe ? "kIOFBUserRequestProbe" : UNKNOWN_VALUE(value));
 				break;
 
 			case kConnectionIgnore:
-				inc += scnprintf(buf+inc, bufSize-inc, "isMuted:%s%s%s", ((value & (1LL << 31)) == 1) ? "true" : "false", (value & ~(1LL << 31)) ? " " : "", (value & ~(1 << 31)) ? UNKNOWN_VALUE(value & ~(1 << 31)) : "");
+				scnprintf(buf+inc, bufSize-inc, "isMuted:%s%s%s", ((value & (1LL << 31)) == 1) ? "true" : "false", (value & ~(1LL << 31)) ? " " : "", (value & ~(1 << 31)) ? UNKNOWN_VALUE(value & ~(1 << 31)) : "");
 				break;
 			
 			case kConnectionChanged:
 			case kConnectionSupportsAppleSense:
 			case kConnectionSupportsHLDDCSense:
 			case kConnectionSupportsLLDDCSense:
-				inc += scnprintf(buf+inc, bufSize-inc, "n/a");
+				scnprintf(buf+inc, bufSize-inc, "n/a");
 				break;
 
 			case kConnectionDisplayParameters:
@@ -2376,7 +2376,7 @@ void DumpOneAttribute(UInt64 attribute, bool set, bool forConnection, void *valu
 				break;
 
 			default:
-				inc += scnprintf(buf+inc, bufSize-inc, "0x%llx", value);
+				scnprintf(buf+inc, bufSize-inc, "0x%llx", value);
 		}
 	}
 
@@ -2462,7 +2462,7 @@ void DumpDisplayInfo(CFMutableDictionaryRef dictDisplayInfo)
 
 	{ // DisplayVendorID
 		num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayVendorID));
-		if (num) {
+		if (num != NULL) {
 			CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 			if (numValue == 'unkn') {
 				iprintf("DisplayVendorID = %d (0x%04x) 'unkn';\n", (int)numValue, (int)numValue);
@@ -2481,7 +2481,7 @@ void DumpDisplayInfo(CFMutableDictionaryRef dictDisplayInfo)
 	
 	{ // DisplayProductID
 		num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplayProductID));
-		if (num) {
+		if (num != NULL) {
 			CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 			iprintf("DisplayProductID = %d (0x%04x);\n", (int)numValue, (int)numValue);
 			CFDictionaryRemoveValue(dictDisplayInfo, CFSTR(kDisplayProductID));
@@ -2586,7 +2586,7 @@ void DumpDisplayInfo(CFMutableDictionaryRef dictDisplayInfo)
 
 	{ // DisplaySerialNumber
 		num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplaySerialNumber));
-		if (num) {
+		if (num != NULL) {
 			UInt32 numValue;
 			CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 			iprintf("DisplaySerialNumber = %u;\n", (uint32_t)numValue);
@@ -2722,7 +2722,7 @@ void DumpOneIODisplay(io_service_t ioDisplayService)
 
 			{ // AppleDisplayType
 				num = (CFNumberRef)CFDictionaryGetValue(IODProperties, CFSTR(kAppleDisplayTypeKey));
-				if (num) {
+				if (num != NULL) {
 					CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 					iprintf("AppleDisplayType = %s;\n",
 						numValue == 0                     ?            "0?" :
@@ -2758,7 +2758,7 @@ void DumpOneIODisplay(io_service_t ioDisplayService)
 			{ // AppleSense
 				// https://developer.apple.com/library/archive/technotes/hw/hw_30.html
 				num = (CFNumberRef)CFDictionaryGetValue(IODProperties, CFSTR(kAppleSenseKey));
-				if (num) {
+				if (num != NULL) {
 					CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 					iprintf("AppleSense = %s%s%s,%s%s%d%d/%d%d/%d%d:%s;\n",
 						numValue & 0xfffff800 ? UNKNOWN_VALUE(numValue & 0xfffff800) : "",
@@ -2960,7 +2960,7 @@ void DumpDisplayService(io_service_t displayService, int modeAlias, const char *
 
 		{ // DisplaySubPixelLayout
 			num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplaySubPixelLayout));
-			if (num) {
+			if (num != NULL) {
 				CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 				iprintf("DisplaySubPixelLayout = %s;\n",
 					numValue == kDisplaySubPixelLayoutUndefined ? "Undefined" :
@@ -2976,7 +2976,7 @@ void DumpDisplayService(io_service_t displayService, int modeAlias, const char *
 		
 		{ // DisplaySubPixelConfiguration
 			num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplaySubPixelConfiguration));
-			if (num) {
+			if (num != NULL) {
 				CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 				iprintf("DisplaySubPixelConfiguration = %s;\n",
 					numValue == kDisplaySubPixelConfigurationUndefined    ?    "Undefined" :
@@ -2992,7 +2992,7 @@ void DumpDisplayService(io_service_t displayService, int modeAlias, const char *
 		
 		{ // DisplaySubPixelShape
 			num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplaySubPixelShape));
-			if (num) {
+			if (num != NULL) {
 				CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 				iprintf("DisplaySubPixelShape = %s;\n",
 					numValue == kDisplaySubPixelShapeUndefined   ?   "Undefined" :
@@ -3028,7 +3028,7 @@ void DumpDisplayService(io_service_t displayService, int modeAlias, const char *
 
 		{ // IOFBTransform
 			num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kIOFBTransformKey));
-			if (num) {
+			if (num != NULL) {
 				CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 				iprintf("IOFBTransform = ");
 				DumpOneTransform(numValue);
@@ -3039,7 +3039,7 @@ void DumpDisplayService(io_service_t displayService, int modeAlias, const char *
 		
 		{ // graphic-options
 			num = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR("graphic-options"));
-			if (num) {
+			if (num != NULL) {
 				CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 				iprintf("graphic-options = %s%s%s%s%s%s%s;\n",
 						numValue == kIOMirrorDefault        ?           "MirrorDefault," : "",
@@ -3059,7 +3059,7 @@ void DumpDisplayService(io_service_t displayService, int modeAlias, const char *
 				float val_ ## C ## Point ## X = 0.0f; \
 				CFNumberRef num_ ## C ## Point ## X = (CFNumberRef)CFDictionaryGetValue(dictDisplayInfo, CFSTR(kDisplay ## C ## Point ## X)); \
 				char str_ ## C ## Point ## X[20] = {}; \
-				if (num_ ## C ## Point ## X) { \
+				if (num_ ## C ## Point ## X != NULL) { \
 					CFNumberGetValue(num_ ## C ## Point ## X, kCFNumberFloatType, &val_ ## C ## Point ## X); \
 					CFDictionaryRemoveValue(dictDisplayInfo, CFSTR(kDisplay ## C ## Point ## X)); \
 					snprintf(str_ ## C ## Point ## X, sizeof(str_ ## C ## Point ## X), "%.7g", val_ ## C ## Point ## X); \
@@ -3598,7 +3598,7 @@ void DumpDisplayService(io_service_t displayService, int modeAlias, const char *
 
 						{ // IOFB0Hz (suppressRefresh)
 							num = (CFNumberRef)CFDictionaryGetValue(IOFBConfig, CFSTR("IOFB0Hz"));
-							if (num) {
+							if (num != NULL) {
 								CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 								iprintf("IOFB0Hz (suppressRefresh) = %s;\n", numValue == 1 ? "true" : numValue == 0 ? "false" : UNKNOWN_VALUE(numValue));
 							}
@@ -3607,7 +3607,7 @@ void DumpDisplayService(io_service_t displayService, int modeAlias, const char *
 
 						{ // IOFBmHz (detailedRefresh)
 							num = (CFNumberRef)CFDictionaryGetValue(IOFBConfig, CFSTR("IOFBmHz"));
-							if (num) {
+							if (num != NULL) {
 								CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 								iprintf("IOFBmHz (detailedRefresh) = %s;\n", numValue == 1 ? "true" : numValue == 0 ? "false" : UNKNOWN_VALUE(numValue));
 								CFDictionaryRemoveValue(IOFBConfig, CFSTR("IOFBmHz"));
@@ -3616,7 +3616,7 @@ void DumpDisplayService(io_service_t displayService, int modeAlias, const char *
 
 						{ // IOFBmir (displayMirror)
 							num = (CFNumberRef)CFDictionaryGetValue(IOFBConfig, CFSTR("IOFBmir"));
-							if (num) {
+							if (num != NULL) {
 								CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 								iprintf("IOFBmir (displayMirror) = %s\n", numValue == 1 ? "true" : numValue == 0 ? "false" : UNKNOWN_VALUE(numValue));
 								CFDictionaryRemoveValue(IOFBConfig, CFSTR("IOFBmir"));
@@ -3625,7 +3625,7 @@ void DumpDisplayService(io_service_t displayService, int modeAlias, const char *
 
 						{ // IOFBScalerUnderscan (useScalerUnderscan)
 							num = (CFNumberRef)CFDictionaryGetValue(IOFBConfig, CFSTR("IOFBScalerUnderscan"));
-							if (num) {
+							if (num != NULL) {
 								CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 								iprintf("IOFBScalerUnderscan (useScalerUnderscan) = %s;\n", numValue == 1 ? "true" : numValue == 0 ? "false" : UNKNOWN_VALUE(numValue));
 								CFDictionaryRemoveValue(IOFBConfig, CFSTR("IOFBScalerUnderscan"));
@@ -3634,7 +3634,7 @@ void DumpDisplayService(io_service_t displayService, int modeAlias, const char *
 
 						{ // IOFBtv (addTVFlag)
 							num = (CFNumberRef)CFDictionaryGetValue(IOFBConfig, CFSTR("IOFBtv"));
-							if (num) {
+							if (num != NULL) {
 								CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 								iprintf("IOFBtv (addTVFlag) = %s;\n", numValue == 1 ? "true" : numValue == 0 ? "false" : UNKNOWN_VALUE(numValue));
 								CFDictionaryRemoveValue(IOFBConfig, CFSTR("IOFBtv"));
@@ -3805,7 +3805,7 @@ void DumpDisplayService(io_service_t displayService, int modeAlias, const char *
 
 				{ // IOFBProbeOptions
 					num = (CFNumberRef)CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBProbeOptionsKey));
-					if (num) {
+					if (num != NULL) {
 						CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 						iprintf("IOFBProbeOptions = %s%s%s%s%s%s Transform:",
 							numValue & kIOFBUserRequestProbe ? "UserRequestProbe," : "", // 0x00000001
@@ -3843,7 +3843,7 @@ void DumpDisplayService(io_service_t displayService, int modeAlias, const char *
 
 				{ // IOFBTransform
 					num = (CFNumberRef)CFDictionaryGetValue(IOFBProperties, CFSTR(kIOFBTransformKey));
-					if (num) {
+					if (num != NULL) {
 						CFNumberGetValue(num, kCFNumberSInt32Type, &numValue);
 						iprintf("IOFBTransform = ");
 						DumpOneTransform(numValue);
