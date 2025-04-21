@@ -47,6 +47,7 @@ char * myprintf(const char *format, ...) {
 	return unknownValue;
 }
 
+#if !defined(DUMPDPCD)
 void CFOutput(CFTypeRef val) {
 	if (val) {
 		CFStringRef theinfo = CFCopyDescription(val); // can't really parse this if the format can change for every macOS
@@ -149,6 +150,7 @@ void CFOutput(CFTypeRef val) {
 		cprintf("(NULL)");
 	}
 }
+#endif
 
 const char * GetIOReturnStr(char * buf, size_t bufSize, int64_t val) {
 

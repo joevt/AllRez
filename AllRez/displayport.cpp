@@ -790,6 +790,7 @@ UInt8 mst_get_message_request_identifier(Sideband_MSG1 *msg1) {
 
 
 
+#if !defined(DUMPDPCD)
 bool mst_get_use_sideband_property(io_service_t ioFramebufferService)
 {
 	static UInt32 useSidebandProperty = 0;
@@ -1324,3 +1325,4 @@ const char *DpErrorStr(DpError dperr) {
 		default: return " ?dpErrUnknown";
 	}
 }
+#endif

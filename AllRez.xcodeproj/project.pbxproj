@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		630F6C152DB6239700185B2A /* dpcd.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6330A9D127C14E2C009D9063 /* dpcd.cpp */; };
+		630F6C2E2DB6241C00185B2A /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 630F6C2D2DB6241C00185B2A /* main.cpp */; };
+		630F6C2F2DB62A5500185B2A /* displayport.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 63576DC62837941700FF5764 /* displayport.cpp */; };
+		630F6C302DB62C1A00185B2A /* oui.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6330A9CE27C14BEB009D9063 /* oui.cpp */; };
+		630F6C312DB62C4F00185B2A /* printf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6330A9D427C1529F009D9063 /* printf.cpp */; };
 		6311E70928630614007B8263 /* iogdiagnose.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6311E70328630614007B8263 /* iogdiagnose.cpp */; };
 		6311E70A28630614007B8263 /* IOGDiagnoseUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6311E70528630614007B8263 /* IOGDiagnoseUtils.cpp */; };
 		63232C7429BAAF7A0048993D /* AppleMisc.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 63232C7329BAAF7A0048993D /* AppleMisc.cpp */; };
@@ -29,11 +34,14 @@
 		637AD5F42804621700F86799 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 637AD5F32804621700F86799 /* main.cpp */; };
 		6391AC3F29CD63900074E11D /* iogdiagnose.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6391AC3829CD63900074E11D /* iogdiagnose.cpp */; };
 		6391AC4029CD63900074E11D /* IOGDiagnoseUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6391AC3A29CD63900074E11D /* IOGDiagnoseUtils.cpp */; };
+		639C00362A2DCC940058A436 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6327426D284F12230037716C /* CoreGraphics.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		63A1AC90283641AE00A17E9D /* iofbdebuguser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 63A1AC8E283641AE00A17E9D /* iofbdebuguser.cpp */; };
 		63DBC67E29CE627F00414F2B /* iogdiagnose.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 63DBC67D29CE627E00414F2B /* iogdiagnose.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		630F6C2C2DB6239700185B2A /* dumpdpcd */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = dumpdpcd; sourceTree = BUILT_PRODUCTS_DIR; };
+		630F6C2D2DB6241C00185B2A /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		6311E6F128586BE0007B8263 /* pexpert.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = pexpert.h; sourceTree = "<group>"; };
 		6311E70128630614007B8263 /* GTraceTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GTraceTypes.h; sourceTree = "<group>"; };
 		6311E70328630614007B8263 /* iogdiagnose.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = iogdiagnose.cpp; sourceTree = "<group>"; };
@@ -103,6 +111,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		630F6C212DB6239700185B2A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		63295FF92782F26C00E55E0D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -111,6 +126,7 @@
 				63274273284F129B0037716C /* CoreDisplay.framework in Frameworks */,
 				6327426E284F123C0037716C /* CoreFoundation.framework in Frameworks */,
 				63274275284F14550037716C /* DisplayServices.framework in Frameworks */,
+				639C00362A2DCC940058A436 /* CoreGraphics.framework in Frameworks */,
 				63274271284F126F0037716C /* IOKit.framework in Frameworks */,
 				63274277284F14650037716C /* SkyLight.framework in Frameworks */,
 				636A38A429D4249B004899C9 /* CoreServices.framework in Frameworks */,
@@ -120,6 +136,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		630F6C0D2DB6230B00185B2A /* dumpdpcd */ = {
+			isa = PBXGroup;
+			children = (
+				630F6C2D2DB6241C00185B2A /* main.cpp */,
+			);
+			path = dumpdpcd;
+			sourceTree = "<group>";
+		};
 		6311E6F228586C11007B8263 /* pexpert */ = {
 			isa = PBXGroup;
 			children = (
@@ -177,6 +201,7 @@
 		63295FF32782F26C00E55E0D = {
 			isa = PBXGroup;
 			children = (
+				630F6C0D2DB6230B00185B2A /* dumpdpcd */,
 				63295FFE2782F26C00E55E0D /* AllRez */,
 				63295FFD2782F26C00E55E0D /* Products */,
 			);
@@ -189,6 +214,7 @@
 			isa = PBXGroup;
 			children = (
 				63295FFC2782F26C00E55E0D /* AllRez */,
+				630F6C2C2DB6239700185B2A /* dumpdpcd */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -545,6 +571,22 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		630F6C0E2DB6239700185B2A /* dumpdpcd */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 630F6C292DB6239700185B2A /* Build configuration list for PBXNativeTarget "dumpdpcd" */;
+			buildPhases = (
+				630F6C0F2DB6239700185B2A /* Sources */,
+				630F6C212DB6239700185B2A /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = dumpdpcd;
+			productName = AllRez;
+			productReference = 630F6C2C2DB6239700185B2A /* dumpdpcd */;
+			productType = "com.apple.product-type.tool";
+		};
 		63295FFB2782F26C00E55E0D /* AllRez */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 632960032782F26C00E55E0D /* Build configuration list for PBXNativeTarget "AllRez" */;
@@ -588,11 +630,24 @@
 			projectRoot = "";
 			targets = (
 				63295FFB2782F26C00E55E0D /* AllRez */,
+				630F6C0E2DB6239700185B2A /* dumpdpcd */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		630F6C0F2DB6239700185B2A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				630F6C2E2DB6241C00185B2A /* main.cpp in Sources */,
+				630F6C302DB62C1A00185B2A /* oui.cpp in Sources */,
+				630F6C312DB62C4F00185B2A /* printf.cpp in Sources */,
+				630F6C152DB6239700185B2A /* dpcd.cpp in Sources */,
+				630F6C2F2DB62A5500185B2A /* displayport.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		63295FF82782F26C00E55E0D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -620,6 +675,22 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		630F6C2A2DB6239700185B2A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				OTHER_CFLAGS = "-DDUMPDPCD";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		630F6C2B2DB6239700185B2A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				OTHER_CFLAGS = "-DDUMPDPCD";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		632960012782F26C00E55E0D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -657,11 +728,14 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				FRAMEWORK_SEARCH_PATHS = (
-					"${SDKROOT}/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks",
-					"${SDKROOT}/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks",
-					"${SDKROOT}/System/Library/PrivateFrameworks",
-					/System/Library/PrivateFrameworks,
-					"${PROJECT_DIR}/AllRez",
+					"${SDKROOT}/System/Library/Frameworks/**",
+					"${SDKROOT}/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/**",
+					"${SDKROOT}/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/**",
+					"${SDKROOT}/System/Library/PrivateFrameworks/**",
+					"/System/Library/PrivateFrameworks/**",
+					"${PROJECT_DIR}/AllRez/**",
+					"${SDKROOT}/usr/include/**",
+					"${SDKROOT}/usr/include/sys/**",
 				);
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -676,12 +750,16 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/include/";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				HEADER_SEARCH_PATHS = (
+					"${SRCROOT}/AllRez/linux/include/",
+					"${SDKROOT}/usr/include/**",
+					"${SDKROOT}/usr/include/sys/**",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				SDKROOT = macosx;
 				SYMROOT = build/build13;
-				SYSTEM_HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/include/ ${SRCROOT}/AllRez/Kernel.framework/";
-				USER_HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/drivers/gpu/drm/amd/display/** ${SRCROOT}/AllRez/linux/include ${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily ${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily/tools/Utilities";
+				SYSTEM_HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/include/ ${SRCROOT}/AllRez/Kernel.framework/ ${SDKROOT}/usr/include/** ${SDKROOT}/usr/include/sys/**";
+				USER_HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/drivers/gpu/drm/amd/display/** ${SRCROOT}/AllRez/linux/include ${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily ${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily/tools/Utilities ${SDKROOT}/usr/include/** ${SDKROOT}/usr/include/sys/**";
 			};
 			name = Debug;
 		};
@@ -722,11 +800,14 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				FRAMEWORK_SEARCH_PATHS = (
-					"${SDKROOT}/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks",
-					"${SDKROOT}/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks",
-					"${SDKROOT}/System/Library/PrivateFrameworks",
-					/System/Library/PrivateFrameworks,
-					"${PROJECT_DIR}/AllRez",
+					"${SDKROOT}/System/Library/Frameworks/**",
+					"${SDKROOT}/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/**",
+					"${SDKROOT}/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/**",
+					"${SDKROOT}/System/Library/PrivateFrameworks/**",
+					"/System/Library/PrivateFrameworks/**",
+					"${PROJECT_DIR}/AllRez/**",
+					"${SDKROOT}/usr/include/**",
+					"${SDKROOT}/usr/include/sys/**",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -735,12 +816,16 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/include/";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				HEADER_SEARCH_PATHS = (
+					"${SRCROOT}/AllRez/linux/include/",
+					"${SDKROOT}/usr/include/**",
+					"${SDKROOT}/usr/include/sys/**",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				SDKROOT = macosx;
 				SYMROOT = build/build13;
-				SYSTEM_HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/include/ ${SRCROOT}/AllRez/Kernel.framework/";
-				USER_HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/drivers/gpu/drm/amd/display/** ${SRCROOT}/AllRez/linux/include ${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily ${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily/tools/Utilities";
+				SYSTEM_HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/include/ ${SRCROOT}/AllRez/Kernel.framework/ ${SDKROOT}/usr/include/** ${SDKROOT}/usr/include/sys/**";
+				USER_HEADER_SEARCH_PATHS = "${SRCROOT}/AllRez/linux/drivers/gpu/drm/amd/display/** ${SRCROOT}/AllRez/linux/include ${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily ${SRCROOT}/AllRez/IOGraphics/IOGraphicsFamily/tools/Utilities ${SDKROOT}/usr/include/** ${SDKROOT}/usr/include/sys/**";
 			};
 			name = Release;
 		};
@@ -748,6 +833,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SYSTEM_FRAMEWORK_SEARCH_PATHS = "$(inherited) $(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks/ApplicationServices.framework/Versions/A/Frameworks";
 			};
 			name = Debug;
 		};
@@ -755,12 +841,22 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SYSTEM_FRAMEWORK_SEARCH_PATHS = "$(inherited) $(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks/ApplicationServices.framework/Versions/A/Frameworks";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		630F6C292DB6239700185B2A /* Build configuration list for PBXNativeTarget "dumpdpcd" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				630F6C2A2DB6239700185B2A /* Debug */,
+				630F6C2B2DB6239700185B2A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		63295FF72782F26C00E55E0D /* Build configuration list for PBXProject "AllRez" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
