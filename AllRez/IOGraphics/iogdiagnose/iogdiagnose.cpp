@@ -538,7 +538,7 @@ const char *GetMessageStr(char *buf, int bufsize, uint64_t val) {
 	const char *str;
 	
 	switch (val) {
-		case kIOReturnSuccess: str = buf; snprintf(buf, bufsize, "?%#llx", val);
+		case kIOReturnSuccess: str = buf; snprintf(buf, bufsize, "?%#llx", val); break;
 		default: str = GetIOReturnStr(buf, bufsize, val);
 	}
 	return str;
